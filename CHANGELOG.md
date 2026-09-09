@@ -7,10 +7,13 @@ All notable changes to Q-Wallets will be documented in this file.
 ### Fixed
 
 - Transaction time tooltips now match the date shown in the row. Rows older than 24 hours display the date as `DD/MM/YY`, but the hover tooltip followed the browser locale, so an `en-US` browser showed the same transaction as `9/8/2026` — swapping the day and the month. Tooltips now use `DD/MM/YYYY HH:mm:ss` on every wallet page.
+- BTC, LTC, DOGE, DGB and RVN send failures now show the detailed message returned by Qortal Hub, keep the entered recipient and amount available for correction or retry, and always close the processing dialog.
+- Successful BTC-family sends now refresh both the wallet balance and transaction history instead of leaving the balance loading until the next scheduled refresh.
 
 ### Tests
 
 - Added tests for the new `epochToDateTime` helper, including one asserting it agrees with `epochToAgo` on day/month order.
+- Added tests for extracting useful messages from the different error shapes returned by `qortalRequest`.
 
 ## [1.3.5] - 2026-08-09
 

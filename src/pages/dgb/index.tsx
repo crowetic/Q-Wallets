@@ -47,6 +47,7 @@ import {
   TIME_SECONDS_2,
   TIME_SECONDS_3,
   TIME_SECONDS_4,
+  TIME_SECONDS_20,
 } from '../../common/constants';
 import {
   SlideTransition,
@@ -57,6 +58,7 @@ import {
 import { Coin } from 'qapp-core';
 import { validateDgbAddress } from '../../utils/addressValidation';
 import { calculateMaxSendable } from '../../utils/maxSendable';
+import { getQortalRequestErrorMessage } from '../../utils/qortalRequestError';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -184,6 +186,7 @@ export default function DigibyteWallet() {
   const [openTxDgbSubmit, setOpenTxDgbSubmit] = useState(false);
   const [openSendDgbSuccess, setOpenSendDgbSuccess] = useState(false);
   const [openSendDgbError, setOpenSendDgbError] = useState(false);
+  const [sendDgbError, setSendDgbError] = useState(EMPTY_STRING);
   const [openDgbAddressBook, setOpenDgbAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
 
@@ -426,9 +429,12 @@ export default function DigibyteWallet() {
     // Conservative revalidation: never submit more than the safely-spendable
     // max, even if state changed (e.g. balance refresh) after input.
     if (dgbAmount <= 0 || dgbAmount > maxSendableDbgCoin()) {
+      setSendDgbError(EMPTY_STRING);
       setOpenSendDgbError(true);
       return;
     }
+    setOpenSendDgbError(false);
+    setSendDgbError(EMPTY_STRING);
     setOpenTxDgbSubmit(true);
     const dgbFeeCalculated = Number(dgbFee / 1e8).toFixed(DECIMAL_ROUND_UP);
     try {
@@ -439,28 +445,22 @@ export default function DigibyteWallet() {
         amount: dgbAmount,
         fee: dgbFeeCalculated,
       });
-      if (!sendRequest?.error) {
-        setDgbAmount(0);
-        setDgbRecipient(EMPTY_STRING);
-        setDgbRecipientDisplayName(EMPTY_STRING);
-        setDgbFee(DGB_FEE);
-        setOpenTxDgbSubmit(false);
-        setOpenSendDgbSuccess(true);
-        setIsLoadingWalletBalanceDgb(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        await getTransactionsDgb();
-      }
-    } catch (error) {
+      if (sendRequest?.error) throw sendRequest;
+
       setDgbAmount(0);
       setDgbRecipient(EMPTY_STRING);
       setDgbRecipientDisplayName(EMPTY_STRING);
       setDgbFee(DGB_FEE);
       setOpenTxDgbSubmit(false);
-      setOpenSendDgbError(true);
-      setIsLoadingWalletBalanceDgb(true);
+      setOpenSendDgbSuccess(true);
       await timeoutDelay(TIME_SECONDS_3);
-      getTransactionsDgb();
+      await Promise.all([getWalletBalanceDgb(), getTransactionsDgb()]);
+    } catch (error) {
+      setSendDgbError(getQortalRequestErrorMessage(error) ?? EMPTY_STRING);
+      setOpenSendDgbError(true);
       console.error('ERROR SENDING DGB', error);
+    } finally {
+      setOpenTxDgbSubmit(false);
     }
   };
 
@@ -608,18 +608,19 @@ export default function DigibyteWallet() {
         </Snackbar>
         <Snackbar
           open={openSendDgbError}
-          autoHideDuration={TIME_SECONDS_4}
+          autoHideDuration={TIME_SECONDS_20}
           onClose={handleCloseSendDgbError}
         >
           <Alert
             onClose={handleCloseSendDgbError}
             severity="error"
             variant="filled"
-            sx={{ width: '100%' }}
+            sx={{ overflowWrap: 'anywhere', width: '100%' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendDgbError ||
+              t('core:message.error.something_went_wrong', {
+                postProcess: 'capitalizeFirstChar',
+              })}
           </Alert>
         </Snackbar>
         <ExternalSendForm

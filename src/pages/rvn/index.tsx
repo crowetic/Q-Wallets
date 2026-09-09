@@ -35,6 +35,7 @@ import {
   TIME_SECONDS_2,
   TIME_SECONDS_3,
   TIME_SECONDS_4,
+  TIME_SECONDS_20,
 } from '../../common/constants';
 import {
   SlideTransition,
@@ -56,6 +57,7 @@ import {
   sendCoinDialogPaperSx,
 } from '../../components/ExternalSendForm';
 import { calculateMaxSendable } from '../../utils/maxSendable';
+import { getQortalRequestErrorMessage } from '../../utils/qortalRequestError';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -183,6 +185,7 @@ export default function RavencoinWallet() {
   const [openTxRvnSubmit, setOpenTxRvnSubmit] = useState(false);
   const [openSendRvnSuccess, setOpenSendRvnSuccess] = useState(false);
   const [openSendRvnError, setOpenSendRvnError] = useState(false);
+  const [sendRvnError, setSendRvnError] = useState(EMPTY_STRING);
   const [openRvnAddressBook, setOpenRvnAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
 
@@ -435,9 +438,12 @@ export default function RavencoinWallet() {
     // Conservative revalidation: never submit more than the safely-spendable
     // max, even if state changed (e.g. balance refresh) after input.
     if (rvnAmount <= 0 || rvnAmount > maxSendableRvnCoin()) {
+      setSendRvnError(EMPTY_STRING);
       setOpenSendRvnError(true);
       return;
     }
+    setOpenSendRvnError(false);
+    setSendRvnError(EMPTY_STRING);
     setOpenTxRvnSubmit(true);
     const rvnFeeCalculated = Number(rvnFee / 1e8).toFixed(DECIMAL_ROUND_UP);
     try {
@@ -448,28 +454,22 @@ export default function RavencoinWallet() {
         amount: rvnAmount,
         fee: rvnFeeCalculated,
       });
-      if (!sendRequest?.error) {
-        setRvnAmount(0);
-        setRvnRecipient(EMPTY_STRING);
-        setRvnRecipientDisplayName(EMPTY_STRING);
-        setRvnFee(RVN_FEE);
-        setOpenTxRvnSubmit(false);
-        setOpenSendRvnSuccess(true);
-        setIsLoadingWalletBalanceRvn(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        await getTransactionsRvn();
-      }
-    } catch (error) {
+      if (sendRequest?.error) throw sendRequest;
+
       setRvnAmount(0);
       setRvnRecipient(EMPTY_STRING);
       setRvnRecipientDisplayName(EMPTY_STRING);
       setRvnFee(RVN_FEE);
       setOpenTxRvnSubmit(false);
-      setOpenSendRvnError(true);
-      setIsLoadingWalletBalanceRvn(true);
+      setOpenSendRvnSuccess(true);
       await timeoutDelay(TIME_SECONDS_3);
-      await getTransactionsRvn();
+      await Promise.all([getWalletBalanceRvn(), getTransactionsRvn()]);
+    } catch (error) {
+      setSendRvnError(getQortalRequestErrorMessage(error) ?? EMPTY_STRING);
+      setOpenSendRvnError(true);
       console.error('ERROR SENDING RVN', error);
+    } finally {
+      setOpenTxRvnSubmit(false);
     }
   };
 
@@ -617,18 +617,19 @@ export default function RavencoinWallet() {
         </Snackbar>
         <Snackbar
           open={openSendRvnError}
-          autoHideDuration={TIME_SECONDS_4}
+          autoHideDuration={TIME_SECONDS_20}
           onClose={handleCloseSendRvnError}
         >
           <Alert
             onClose={handleCloseSendRvnError}
             severity="error"
             variant="filled"
-            sx={{ width: '100%' }}
+            sx={{ overflowWrap: 'anywhere', width: '100%' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendRvnError ||
+              t('core:message.error.something_went_wrong', {
+                postProcess: 'capitalizeFirstChar',
+              })}
           </Alert>
         </Snackbar>
         <ExternalSendForm

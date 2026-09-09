@@ -46,6 +46,7 @@ import {
   TIME_SECONDS_2,
   TIME_SECONDS_3,
   TIME_SECONDS_4,
+  TIME_SECONDS_20,
 } from '../../common/constants';
 import {
   SlideTransition,
@@ -57,6 +58,7 @@ import { FeeManager } from '../../components/FeeManager';
 import { Coin } from 'qapp-core';
 import { validateDogeAddress } from '../../utils/addressValidation';
 import { calculateMaxSendable } from '../../utils/maxSendable';
+import { getQortalRequestErrorMessage } from '../../utils/qortalRequestError';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -160,6 +162,7 @@ export default function DogecoinWallet() {
   const [openTxDogeSubmit, setOpenTxDogeSubmit] = useState(false);
   const [openSendDogeSuccess, setOpenSendDogeSuccess] = useState(false);
   const [openSendDogeError, setOpenSendDogeError] = useState(false);
+  const [sendDogeError, setSendDogeError] = useState(EMPTY_STRING);
   const [openDogeAddressBook, setOpenDogeAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
 
@@ -197,6 +200,7 @@ export default function DogecoinWallet() {
     setOpenDogeSend(true);
     setAddressFormatError(false);
     setOpenSendDogeError(false);
+    setSendDogeError(EMPTY_STRING);
   };
 
   const handleOpenDogeSend = () => {
@@ -206,6 +210,7 @@ export default function DogecoinWallet() {
     setOpenDogeSend(true);
     setAddressFormatError(false);
     setOpenSendDogeError(false);
+    setSendDogeError(EMPTY_STRING);
   };
 
   const disableCanSendDoge = () =>
@@ -402,10 +407,13 @@ export default function DogecoinWallet() {
     // Conservative revalidation: never submit more than the safely-spendable
     // max, even if state changed (e.g. balance refresh) after input.
     if (dogeAmount <= 0 || dogeAmount > maxSendableDogeCoin()) {
+      setSendDogeError(EMPTY_STRING);
       setOpenSendDogeError(true);
       return;
     }
 
+    setOpenSendDogeError(false);
+    setSendDogeError(EMPTY_STRING);
     setOpenTxDogeSubmit(true);
     try {
       const sendRequest = await qortalRequest({
@@ -415,26 +423,21 @@ export default function DogecoinWallet() {
         amount: dogeAmount,
         fee: dogeFeeCalculated,
       });
-      if (!sendRequest?.error) {
-        setDogeAmount(0);
-        setDogeRecipient(EMPTY_STRING);
-        setDogeRecipientDisplayName(EMPTY_STRING);
-        setOpenTxDogeSubmit(false);
-        setOpenSendDogeSuccess(true);
-        setIsLoadingWalletBalanceDoge(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        await getTransactionsDoge();
-      }
-    } catch (error) {
+      if (sendRequest?.error) throw sendRequest;
+
       setDogeAmount(0);
       setDogeRecipient(EMPTY_STRING);
       setDogeRecipientDisplayName(EMPTY_STRING);
       setOpenTxDogeSubmit(false);
-      setOpenSendDogeError(true);
-      setIsLoadingWalletBalanceDoge(true);
+      setOpenSendDogeSuccess(true);
       await timeoutDelay(TIME_SECONDS_3);
-      await getTransactionsDoge();
+      await Promise.all([getWalletBalanceDoge(), getTransactionsDoge()]);
+    } catch (error) {
+      setSendDogeError(getQortalRequestErrorMessage(error) ?? EMPTY_STRING);
+      setOpenSendDogeError(true);
       console.error('ERROR SENDING DOGE', error);
+    } finally {
+      setOpenTxDogeSubmit(false);
     }
   };
 
@@ -582,18 +585,19 @@ export default function DogecoinWallet() {
         </Snackbar>
         <Snackbar
           open={openSendDogeError}
-          autoHideDuration={TIME_SECONDS_4}
+          autoHideDuration={TIME_SECONDS_20}
           onClose={handleCloseSendDogeError}
         >
           <Alert
             onClose={handleCloseSendDogeError}
             severity="error"
             variant="filled"
-            sx={{ width: '100%' }}
+            sx={{ overflowWrap: 'anywhere', width: '100%' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendDogeError ||
+              t('core:message.error.something_went_wrong', {
+                postProcess: 'capitalizeFirstChar',
+              })}
           </Alert>
         </Snackbar>
         <ExternalSendForm

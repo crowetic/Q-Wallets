@@ -35,6 +35,7 @@ import {
   TIME_SECONDS_2,
   TIME_SECONDS_3,
   TIME_SECONDS_4,
+  TIME_SECONDS_20,
 } from '../../common/constants';
 import {
   SlideTransition,
@@ -46,6 +47,7 @@ import { FeeManager } from '../../components/FeeManager';
 import { Coin } from 'qapp-core';
 import { validateLtcAddress } from '../../utils/addressValidation';
 import { calculateMaxSendable } from '../../utils/maxSendable';
+import { getQortalRequestErrorMessage } from '../../utils/qortalRequestError';
 import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
 import {
   WalletExternalTransactionsList,
@@ -160,6 +162,7 @@ export default function LitecoinWallet() {
   const [openTxLtcSubmit, setOpenTxLtcSubmit] = useState(false);
   const [openSendLtcSuccess, setOpenSendLtcSuccess] = useState(false);
   const [openSendLtcError, setOpenSendLtcError] = useState(false);
+  const [sendLtcError, setSendLtcError] = useState(EMPTY_STRING);
   const [openLtcAddressBook, setOpenLtcAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
   const [inputFee, setInputFee] = useState(0);
@@ -196,6 +199,7 @@ export default function LitecoinWallet() {
     setOpenLtcSend(true);
     setAddressFormatError(false);
     setOpenSendLtcError(false);
+    setSendLtcError(EMPTY_STRING);
     setWalletInfoError(null);
     setWalletBalanceError(null);
   };
@@ -207,6 +211,7 @@ export default function LitecoinWallet() {
     setOpenLtcSend(true);
     setAddressFormatError(false);
     setOpenSendLtcError(false);
+    setSendLtcError(EMPTY_STRING);
     setWalletInfoError(null);
     setWalletBalanceError(null);
   };
@@ -407,9 +412,12 @@ export default function LitecoinWallet() {
     // Conservative revalidation: never submit more than the safely-spendable
     // max, even if state changed (e.g. balance refresh) after input.
     if (ltcAmount <= 0 || ltcAmount > maxSendableLtcCoin()) {
+      setSendLtcError(EMPTY_STRING);
       setOpenSendLtcError(true);
       return;
     }
+    setOpenSendLtcError(false);
+    setSendLtcError(EMPTY_STRING);
     setOpenTxLtcSubmit(true);
 
     try {
@@ -420,26 +428,21 @@ export default function LitecoinWallet() {
         amount: ltcAmount,
         fee: ltcFeeCalculated,
       });
-      if (!sendRequest?.error) {
-        setLtcAmount(0);
-        setLtcRecipient(EMPTY_STRING);
-        setLtcRecipientDisplayName(EMPTY_STRING);
-        setOpenTxLtcSubmit(false);
-        setOpenSendLtcSuccess(true);
-        setIsLoadingWalletBalanceLtc(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        await getTransactionsLtc();
-      }
-    } catch (error) {
+      if (sendRequest?.error) throw sendRequest;
+
       setLtcAmount(0);
       setLtcRecipient(EMPTY_STRING);
       setLtcRecipientDisplayName(EMPTY_STRING);
       setOpenTxLtcSubmit(false);
-      setOpenSendLtcError(true);
-      setIsLoadingWalletBalanceLtc(true);
+      setOpenSendLtcSuccess(true);
       await timeoutDelay(TIME_SECONDS_3);
-      await getTransactionsLtc();
+      await Promise.all([getWalletBalanceLtc(), getTransactionsLtc()]);
+    } catch (error) {
+      setSendLtcError(getQortalRequestErrorMessage(error) ?? EMPTY_STRING);
+      setOpenSendLtcError(true);
       console.error('ERROR SENDING LTC', error);
+    } finally {
+      setOpenTxLtcSubmit(false);
     }
   };
 
@@ -587,18 +590,19 @@ export default function LitecoinWallet() {
         </Snackbar>
         <Snackbar
           open={openSendLtcError}
-          autoHideDuration={TIME_SECONDS_4}
+          autoHideDuration={TIME_SECONDS_20}
           onClose={handleCloseSendLtcError}
         >
           <Alert
             onClose={handleCloseSendLtcError}
             severity="error"
             variant="filled"
-            sx={{ width: '100%' }}
+            sx={{ overflowWrap: 'anywhere', width: '100%' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendLtcError ||
+              t('core:message.error.something_went_wrong', {
+                postProcess: 'capitalizeFirstChar',
+              })}
           </Alert>
         </Snackbar>
         <ExternalSendForm

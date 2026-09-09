@@ -36,6 +36,7 @@ import {
   TIME_SECONDS_2,
   TIME_SECONDS_3,
   TIME_SECONDS_4,
+  TIME_SECONDS_20,
 } from '../../common/constants';
 import {
   SlideTransition,
@@ -46,6 +47,7 @@ import {
 import { Coin } from 'qapp-core';
 import { validateBtcAddress } from '../../utils/addressValidation';
 import { calculateMaxSendable } from '../../utils/maxSendable';
+import { getQortalRequestErrorMessage } from '../../utils/qortalRequestError';
 import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
 import {
   WalletExternalTransactionsList,
@@ -160,6 +162,7 @@ export default function BitcoinWallet() {
   const [openTxBtcSubmit, setOpenTxBtcSubmit] = useState(false);
   const [openSendBtcSuccess, setOpenSendBtcSuccess] = useState(false);
   const [openSendBtcError, setOpenSendBtcError] = useState(false);
+  const [sendBtcError, setSendBtcError] = useState(EMPTY_STRING);
   const [openBtcAddressBook, setOpenBtcAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
   const [inputFee, setInputFee] = useState(0);
@@ -195,6 +198,7 @@ export default function BitcoinWallet() {
     setOpenBtcSend(true);
     setAddressFormatError(false);
     setOpenSendBtcError(false);
+    setSendBtcError(EMPTY_STRING);
     setWalletBalanceError(null);
   };
 
@@ -205,6 +209,7 @@ export default function BitcoinWallet() {
     setOpenBtcSend(true);
     setAddressFormatError(false);
     setOpenSendBtcError(false);
+    setSendBtcError(EMPTY_STRING);
     setWalletBalanceError(null);
   };
 
@@ -403,9 +408,12 @@ export default function BitcoinWallet() {
     // Conservative revalidation: never submit more than the safely-spendable
     // max, even if state changed (e.g. balance refresh) after input.
     if (btcAmount <= 0 || btcAmount > maxSendableBtcCoin()) {
+      setSendBtcError(EMPTY_STRING);
       setOpenSendBtcError(true);
       return;
     }
+    setOpenSendBtcError(false);
+    setSendBtcError(EMPTY_STRING);
     setOpenTxBtcSubmit(true);
     try {
       const sendRequest = await qortalRequest({
@@ -415,26 +423,21 @@ export default function BitcoinWallet() {
         amount: btcAmount,
         fee: btcFeeCalculated,
       });
-      if (!sendRequest?.error) {
-        setBtcAmount(0);
-        setBtcRecipient(EMPTY_STRING);
-        setBtcRecipientDisplayName(EMPTY_STRING);
-        setOpenTxBtcSubmit(false);
-        setOpenSendBtcSuccess(true);
-        setIsLoadingWalletBalanceBtc(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        await getTransactionsBtc();
-      }
-    } catch (error) {
+      if (sendRequest?.error) throw sendRequest;
+
       setBtcAmount(0);
       setBtcRecipient(EMPTY_STRING);
       setBtcRecipientDisplayName(EMPTY_STRING);
       setOpenTxBtcSubmit(false);
-      setOpenSendBtcError(true);
-      setIsLoadingWalletBalanceBtc(true);
+      setOpenSendBtcSuccess(true);
       await timeoutDelay(TIME_SECONDS_3);
-      getTransactionsBtc();
+      await Promise.all([getWalletBalanceBtc(), getTransactionsBtc()]);
+    } catch (error) {
+      setSendBtcError(getQortalRequestErrorMessage(error) ?? EMPTY_STRING);
+      setOpenSendBtcError(true);
       console.error('ERROR SENDING BTC', error);
+    } finally {
+      setOpenTxBtcSubmit(false);
     }
   };
 
@@ -582,18 +585,19 @@ export default function BitcoinWallet() {
         </Snackbar>
         <Snackbar
           open={openSendBtcError}
-          autoHideDuration={TIME_SECONDS_4}
+          autoHideDuration={TIME_SECONDS_20}
           onClose={handleCloseSendBtcError}
         >
           <Alert
             onClose={handleCloseSendBtcError}
             severity="error"
             variant="filled"
-            sx={{ width: '100%' }}
+            sx={{ overflowWrap: 'anywhere', width: '100%' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendBtcError ||
+              t('core:message.error.something_went_wrong', {
+                postProcess: 'capitalizeFirstChar',
+              })}
           </Alert>
         </Snackbar>
         <ExternalSendForm
