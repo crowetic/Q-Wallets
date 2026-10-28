@@ -18,6 +18,7 @@ const fetchJsonWithTimeout = async (url: string, signal?: AbortSignal) => {
   const abortRequest = () => controller.abort();
 
   signal?.addEventListener('abort', abortRequest, { once: true });
+  if (signal?.aborted) controller.abort();
 
   try {
     const response = await fetch(url, {
@@ -33,6 +34,22 @@ const fetchJsonWithTimeout = async (url: string, signal?: AbortSignal) => {
     window.clearTimeout(timeoutId);
     signal?.removeEventListener('abort', abortRequest);
   }
+};
+
+export const validateArrrRecipientWithCore = async (
+  address: string,
+  signal?: AbortSignal
+): Promise<boolean> => {
+  const recipient = address.trim();
+  if (!recipient) return false;
+  const result = await fetchJsonWithTimeout(
+    `/crosschain/arrr/validateaddress?address=${encodeURIComponent(recipient)}`,
+    signal
+  );
+  if (typeof result !== 'boolean') {
+    throw new Error('Unexpected Core address validation response');
+  }
+  return result;
 };
 
 const toNameSearchResults = (payload: unknown): QortalNameSearchResult[] => {

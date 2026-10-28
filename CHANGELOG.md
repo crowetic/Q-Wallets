@@ -2,6 +2,13 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.3.6] - 2026-10-28
+
+### Fixed
+
+- Validate ARRR transfer recipients and Address Book entries through the selected Core, accepting supported shielded addresses such as Ironwood without hardcoded prefix or length rules. Remove the 78-character transfer-field limit that truncated Ironwood addresses.
+- Keep ARRR sending and contact saving disabled while address validation is pending or unavailable. Show translated validation status, ignore obsolete responses, and check the recipient again before handing a payment to the wallet host. Requires Core's `/crosschain/arrr/validateaddress` endpoint.
+
 ## [1.3.5] - 2026-08-09
 
 ### Fixed

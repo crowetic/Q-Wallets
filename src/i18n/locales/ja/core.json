@@ -238,7 +238,10 @@
     "optional_memo": "任意のメモ",
     "symbol_memo": "{{symbol}}メモ",
     "symbol_address_placeholder": "{{symbol}}アドレス",
-    "symbol_receiver_address": "{{symbol}}受取アドレス"
+    "symbol_receiver_address": "{{symbol}}受取アドレス",
+    "arrr_address_invalid": "選択したCoreはこのARRRアドレスを認識できません。",
+    "arrr_validation_unavailable": "アドレスを検証できません。Coreの接続とバージョンを確認してください。",
+    "arrr_validating": "Coreでアドレスを確認中…"
   },
   "filters": {
     "all": "すべて",

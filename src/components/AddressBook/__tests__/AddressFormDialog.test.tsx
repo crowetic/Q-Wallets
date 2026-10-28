@@ -22,6 +22,7 @@ vi.mock('../../../utils/addressValidation');
 
 vi.mock('../../../utils/qortalNodeApi', () => ({
   searchQortalNames: vi.fn(),
+  validateArrrRecipientWithCore: vi.fn(),
 }));
 
 describe('AddressFormDialog', () => {
@@ -35,17 +36,83 @@ describe('AddressFormDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(addressValidation.validateAddress).mockReturnValue(true);
+    vi.mocked(addressValidation.validateArrrAddress).mockResolvedValue(false);
     vi.mocked(searchQortalNames).mockResolvedValue([]);
     vi.stubGlobal('qortalRequest', vi.fn());
+  });
+
+  describe('ARRR Core validation', () => {
+    const address =
+      'pirate1lyp0g5438qkp9s5me5epku9ak9k0dxqsfyt9z894zym8qw38sps488ljyee27yw29vc2cyj8mse';
+
+    it('saves the full Ironwood address only after Core accepts it', async () => {
+      vi.mocked(addressValidation.validateArrrAddress).mockResolvedValue(true);
+      const user = userEvent.setup();
+      render(
+        <AddressFormDialog
+          {...defaultProps}
+          coinType={Coin.ARRR}
+          prefillName="Pirate contact"
+          prefillAddress={address}
+        />
+      );
+      const saveButton = screen.getByText(/core:address_book_save/);
+      expect(saveButton).toBeDisabled();
+      await waitFor(() => expect(saveButton).toBeEnabled());
+      expect(screen.getByLabelText(/core:address_book_address/)).toHaveValue(
+        address
+      );
+      await user.click(saveButton);
+      expect(defaultProps.onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ address, coinType: Coin.ARRR })
+      );
+      expect(addressValidation.validateAddress).not.toHaveBeenCalled();
+    });
+
+    it('does not save a rejected ARRR recipient', async () => {
+      render(
+        <AddressFormDialog
+          {...defaultProps}
+          coinType={Coin.ARRR}
+          prefillName="Pirate contact"
+          prefillAddress={address}
+        />
+      );
+      await screen.findByText('core:send.arrr_address_invalid');
+      expect(screen.getByText(/core:address_book_save/)).toBeDisabled();
+      expect(defaultProps.onSave).not.toHaveBeenCalled();
+    });
+
+    it('explains unavailable validation without falling back to the old local regex', async () => {
+      vi.mocked(addressValidation.validateArrrAddress).mockRejectedValue(
+        new Error('404')
+      );
+      render(
+        <AddressFormDialog
+          {...defaultProps}
+          coinType={Coin.ARRR}
+          prefillName="Pirate contact"
+          prefillAddress={address}
+        />
+      );
+      await screen.findByText('core:send.arrr_validation_unavailable');
+      expect(screen.getByText(/core:address_book_save/)).toBeDisabled();
+    });
   });
 
   describe('basic rendering', () => {
     it('should render form fields when open', () => {
       render(<AddressFormDialog {...defaultProps} />);
 
-      expect(screen.getByLabelText(/core:address_book_name/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/core:address_book_address/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/core:address_book_note/)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/core:address_book_name/)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/core:address_book_address/)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/core:address_book_note/)
+      ).toBeInTheDocument();
     });
 
     it('should show the note character counter', () => {
@@ -68,9 +135,15 @@ describe('AddressFormDialog', () => {
 
       render(<AddressFormDialog {...defaultProps} entry={entry} />);
 
-      const nameInput = screen.getByLabelText(/core:address_book_name/) as HTMLInputElement;
-      const addressInput = screen.getByLabelText(/core:address_book_address/) as HTMLInputElement;
-      const noteInput = screen.getByLabelText(/core:address_book_note/) as HTMLInputElement;
+      const nameInput = screen.getByLabelText(
+        /core:address_book_name/
+      ) as HTMLInputElement;
+      const addressInput = screen.getByLabelText(
+        /core:address_book_address/
+      ) as HTMLInputElement;
+      const noteInput = screen.getByLabelText(
+        /core:address_book_note/
+      ) as HTMLInputElement;
 
       expect(nameInput.value).toBe('Alice');
       expect(addressInput.value).toBe('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa');
@@ -186,7 +259,9 @@ describe('AddressFormDialog', () => {
 
   describe('error display', () => {
     it('should display save error when provided', () => {
-      render(<AddressFormDialog {...defaultProps} saveError="Duplicate address" />);
+      render(
+        <AddressFormDialog {...defaultProps} saveError="Duplicate address" />
+      );
 
       expect(screen.getByText('Duplicate address')).toBeInTheDocument();
     });

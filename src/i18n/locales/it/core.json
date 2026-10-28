@@ -237,7 +237,10 @@
     "optional_memo": "Memo opzionale",
     "symbol_memo": "Memo {{symbol}}",
     "symbol_address_placeholder": "Indirizzo {{symbol}}",
-    "symbol_receiver_address": "Indirizzo destinatario {{symbol}}"
+    "symbol_receiver_address": "Indirizzo destinatario {{symbol}}",
+    "arrr_address_invalid": "Il Core selezionato non riconosce questo indirizzo ARRR.",
+    "arrr_validation_unavailable": "La convalida degli indirizzi non è disponibile. Controlla la connessione e la versione del tuo Core.",
+    "arrr_validating": "Verifica dell’indirizzo con Core…"
   },
   "filters": {
     "all": "Tutto",

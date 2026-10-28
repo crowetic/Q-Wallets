@@ -238,7 +238,10 @@
     "optional_memo": "Memo opcional",
     "symbol_memo": "Memo {{symbol}}",
     "symbol_address_placeholder": "Endereco {{symbol}}",
-    "symbol_receiver_address": "Endereco de recebimento {{symbol}}"
+    "symbol_receiver_address": "Endereco de recebimento {{symbol}}",
+    "arrr_address_invalid": "O Core selecionado não reconhece este endereço ARRR.",
+    "arrr_validation_unavailable": "A validação de endereços não está disponível. Verifique a conexão e a versão do seu Core.",
+    "arrr_validating": "Verificando o endereço com o Core…"
   },
   "filters": {
     "all": "Tudo",

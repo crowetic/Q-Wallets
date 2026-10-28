@@ -72,6 +72,7 @@ import {
   sendCoinDialogPaperSx,
 } from '../../components/ExternalSendForm';
 import { calculateMaxSendable } from '../../utils/maxSendable';
+import { useArrrAddressValidation } from '../../hooks/useArrrAddressValidation';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -181,7 +182,13 @@ export default function PirateWallet() {
   const [arrrRecipient, setArrrRecipient] = useState(EMPTY_STRING);
   const [arrrRecipientDisplayName, setArrrRecipientDisplayName] =
     useState(EMPTY_STRING);
-  const [addressFormatError, setAddressFormatError] = useState(false);
+  const recipientValidation = useArrrAddressValidation(
+    arrrRecipient,
+    openArrrSend
+  );
+  const addressFormatError =
+    recipientValidation.status === 'invalid' ||
+    recipientValidation.status === 'unavailable';
   const [loadingRefreshArrr, setLoadingRefreshArrr] = useState(false);
   const [openTxArrrSubmit, setOpenTxArrrSubmit] = useState(false);
   const [openSendArrrSuccess, setOpenSendArrrSuccess] = useState(false);
@@ -275,7 +282,6 @@ export default function PirateWallet() {
     setArrrAmount(0);
     setOpenArrrAddressBook(false);
     setOpenArrrSend(true);
-    setAddressFormatError(false);
     setOpenSendArrrError(false);
   };
 
@@ -285,14 +291,13 @@ export default function PirateWallet() {
     setArrrRecipientDisplayName(EMPTY_STRING);
     setArrrMemo(EMPTY_STRING);
     setOpenArrrSend(true);
-    setAddressFormatError(false);
     setOpenSendArrrError(false);
   };
 
   const disableCanSendArrr = () =>
     arrrAmount <= 0 ||
     arrrRecipient === EMPTY_STRING ||
-    addressFormatError ||
+    recipientValidation.status !== 'valid' ||
     arrrAmount > maxSendableArrrCoin();
 
   const handleRecipientChange = (
@@ -301,12 +306,6 @@ export default function PirateWallet() {
     const value = e.target.value.trim();
     setArrrRecipient(value);
     setArrrRecipientDisplayName(EMPTY_STRING);
-
-    if (validateArrrAddress(value) || value === EMPTY_STRING) {
-      setAddressFormatError(false);
-    } else {
-      setAddressFormatError(true);
-    }
   };
 
   const handleCloseArrrSend = () => {
@@ -315,14 +314,12 @@ export default function PirateWallet() {
     setArrrRecipientDisplayName(EMPTY_STRING);
     setArrrMemo(EMPTY_STRING);
     setOpenArrrSend(false);
-    setAddressFormatError(false);
     setOpenSendArrrError(false);
   };
 
   const handleClearArrrRecipient = () => {
     setArrrRecipient(EMPTY_STRING);
     setArrrRecipientDisplayName(EMPTY_STRING);
-    setAddressFormatError(false);
     setOpenSendArrrError(false);
   };
 
@@ -377,12 +374,23 @@ export default function PirateWallet() {
   const sendArrrRequest = async () => {
     // Conservative revalidation: never submit more than the safely-spendable
     // max, even if state changed (e.g. balance refresh) after input.
-    if (arrrAmount <= 0 || arrrAmount > maxSendableArrrCoin()) {
+    if (
+      arrrAmount <= 0 ||
+      arrrAmount > maxSendableArrrCoin() ||
+      recipientValidation.status !== 'valid'
+    ) {
       setOpenSendArrrError(true);
       return;
     }
     setOpenTxArrrSubmit(true);
     try {
+      // Recheck through the selected Core immediately before handing off the
+      // payment. No wallet secrets are needed for address validation.
+      if (!(await validateArrrAddress(arrrRecipient))) {
+        setOpenTxArrrSubmit(false);
+        setOpenSendArrrError(true);
+        return;
+      }
       const sendRequest = await qortalRequest({
         action: 'SEND_COIN',
         coin: Coin.ARRR,
@@ -922,15 +930,20 @@ export default function PirateWallet() {
         </Snackbar>
         <ExternalSendForm
           addressError={addressFormatError}
+          addressValidationPending={recipientValidation.status === 'pending'}
           addressHelperText={
-            t('core:message.generic.pirate_chain_address', {
-              postProcess: 'capitalizeFirstChar',
-            })
+            recipientValidation.status === 'unavailable'
+              ? t('core:send.arrr_validation_unavailable')
+              : recipientValidation.status === 'pending'
+                ? t('core:send.arrr_validating')
+                : t('core:send.arrr_address_invalid')
           }
           addressInputId="arrr-address"
           afterRecipientContent={
             <Box sx={{ display: 'grid', gap: 0.85 }}>
-              <Typography sx={arrrSendLabelSx}>{t('core:send.memo')}</Typography>
+              <Typography sx={arrrSendLabelSx}>
+                {t('core:send.memo')}
+              </Typography>
               <TextField
                 id="arrr-memo"
                 value={arrrMemo}
@@ -1004,10 +1017,6 @@ export default function PirateWallet() {
           onSendMax={handleSendMaxArrr}
           recipient={arrrRecipient}
           recipientDisplayName={arrrRecipientDisplayName}
-          recipientInputProps={{
-            maxLength: 78,
-            minLength: 78,
-          }}
           recipientSubtitle={t('core:address_book_ui.symbol_contact', {
             symbol: 'ARRR',
           })}

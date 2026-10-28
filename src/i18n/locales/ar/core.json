@@ -237,7 +237,10 @@
     "optional_memo": "مذكرة اختيارية",
     "symbol_memo": "مذكرة {{symbol}}",
     "symbol_address_placeholder": "عنوان {{symbol}}",
-    "symbol_receiver_address": "عنوان مستلم {{symbol}}"
+    "symbol_receiver_address": "عنوان مستلم {{symbol}}",
+    "arrr_address_invalid": "لا يتعرف Core المحدد على عنوان ARRR هذا.",
+    "arrr_validation_unavailable": "التحقق من العنوان غير متاح. تحقق من اتصال Core وإصداره.",
+    "arrr_validating": "جارٍ التحقق من العنوان باستخدام Core…"
   },
   "filters": {
     "all": "الكل",

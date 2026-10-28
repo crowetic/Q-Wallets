@@ -238,7 +238,10 @@
     "optional_memo": "可选备注",
     "symbol_memo": "{{symbol}} 备注",
     "symbol_address_placeholder": "{{symbol}} 地址",
-    "symbol_receiver_address": "{{symbol}} 接收地址"
+    "symbol_receiver_address": "{{symbol}} 接收地址",
+    "arrr_address_invalid": "所选 Core 无法识别此 ARRR 地址。",
+    "arrr_validation_unavailable": "地址验证不可用。请检查 Core 的连接和版本。",
+    "arrr_validating": "正在通过 Core 检查地址…"
   },
   "filters": {
     "all": "全部",

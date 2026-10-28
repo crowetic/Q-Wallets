@@ -238,7 +238,10 @@
     "optional_memo": "Необязательная заметка",
     "symbol_memo": "Заметка {{symbol}}",
     "symbol_address_placeholder": "Адрес {{symbol}}",
-    "symbol_receiver_address": "Адрес получателя {{symbol}}"
+    "symbol_receiver_address": "Адрес получателя {{symbol}}",
+    "arrr_address_invalid": "Выбранный Core не распознаёт этот адрес ARRR.",
+    "arrr_validation_unavailable": "Проверка адреса недоступна. Проверьте подключение и версию Core.",
+    "arrr_validating": "Проверка адреса через Core…"
   },
   "filters": {
     "all": "Все",

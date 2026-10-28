@@ -1,5 +1,6 @@
 import { Coin } from 'qapp-core';
 import { EMPTY_STRING } from '../common/constants';
+import { validateArrrRecipientWithCore } from './qortalNodeApi';
 
 /**
  * Validate Bitcoin (BTC) address format
@@ -53,13 +54,10 @@ export const validateDgbAddress = (address: string): boolean => {
 };
 
 /**
- * Validate Pirate Chain (ARRR) address format
- * Supports Sapling shielded addresses (zs1...)
+ * Ask Core to validate Pirate Chain addresses, including their checksum.
+ * Do not duplicate changing shielded-pool formats in the app.
  */
-export const validateArrrAddress = (address: string): boolean => {
-  const pattern = /^(zs1[a-zA-Z0-9]{75})$/;
-  return pattern.test(address.trim());
-};
+export const validateArrrAddress = validateArrrRecipientWithCore;
 
 /**
  * Validate Qortal (QORT) address format
@@ -95,11 +93,15 @@ export const validateAddress = (coinType: Coin, address: string): boolean => {
     case Coin.DGB:
       return validateDgbAddress(address);
     case Coin.ARRR:
-      return validateArrrAddress(address);
+      // ARRR requires the asynchronous Core validator. Synchronous callers
+      // must fail closed; the send and address-book forms use that validator.
+      return false;
     case Coin.QORT:
       return validateQortAddress(address);
     default:
-      console.warn(`Address validation not implemented for coin type: ${coinType}`);
+      console.warn(
+        `Address validation not implemented for coin type: ${coinType}`
+      );
       return false;
   }
 };

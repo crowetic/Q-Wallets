@@ -46,6 +46,7 @@ import coinLogoDOGE from '../../assets/doge.png';
 import coinLogoLTC from '../../assets/ltc.png';
 import coinLogoQORT from '../../assets/qort.png';
 import coinLogoRVN from '../../assets/rvn.png';
+import { useArrrAddressValidation } from '../../hooks/useArrrAddressValidation';
 
 const ADDRESS_LOOKUP_DEBOUNCE_MS = 350;
 const ADDRESS_MIN_LENGTH = 3;
@@ -79,9 +80,7 @@ const fieldLabelSx = {
 const formFieldSx = {
   '& .MuiOutlinedInput-root': {
     bgcolor: (t: Theme) =>
-      t.palette.mode === 'dark'
-        ? 'rgba(0,8,16,0.2)'
-        : 'rgba(255,255,255,0.76)',
+      t.palette.mode === 'dark' ? 'rgba(0,8,16,0.2)' : 'rgba(255,255,255,0.76)',
     borderRadius: 1.35,
     minHeight: { xs: 54, sm: 56 },
     px: { xs: 1.2, sm: 1.35 },
@@ -158,7 +157,19 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
   const [note, setNote] = useState(EMPTY_STRING);
 
   const [nameError, setNameError] = useState(EMPTY_STRING);
-  const [addressError, setAddressError] = useState(EMPTY_STRING);
+  const [localAddressError, setAddressError] = useState(EMPTY_STRING);
+  const arrrValidation = useArrrAddressValidation(
+    address,
+    open && coinType === Coin.ARRR
+  );
+  const addressError =
+    coinType === Coin.ARRR && address.trim()
+      ? arrrValidation.status === 'unavailable'
+        ? t('core:send.arrr_validation_unavailable')
+        : arrrValidation.status === 'invalid'
+          ? t('core:send.arrr_address_invalid')
+          : EMPTY_STRING
+      : localAddressError;
   const [noteError, setNoteError] = useState(EMPTY_STRING);
 
   // QORT-specific state for username resolution
@@ -194,9 +205,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
     !!qortUnregisteredAddress &&
     qortUnregisteredAddress === address.trim();
 
-  const isNameSuggestionAlreadySaved = (
-    suggestion: QortalNameSearchResult
-  ) => {
+  const isNameSuggestionAlreadySaved = (suggestion: QortalNameSearchResult) => {
     const suggestionName = suggestion.name.trim().toLowerCase();
     const suggestionOwner = (suggestion.owner || EMPTY_STRING).trim();
 
@@ -428,6 +437,12 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
       );
       return false;
     }
+    if (coinType === Coin.ARRR) {
+      return (
+        arrrValidation.address === value.trim() &&
+        arrrValidation.status === 'valid'
+      );
+    }
     if (!validateAddress(coinType, value)) {
       setAddressError(
         t('core:address_book_address_invalid', {
@@ -585,6 +600,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
     address.trim() !== EMPTY_STRING &&
     !nameError &&
     !addressError &&
+    (coinType !== Coin.ARRR || arrrValidation.status === 'valid') &&
     !noteError &&
     (coinType === Coin.QORT
       ? !addressValidating && addressConfirmed && isQortResolvedContactCurrent
@@ -612,9 +628,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
         paper: {
           sx: {
             bgcolor: (t: Theme) =>
-              t.palette.mode === 'dark'
-                ? 'rgba(3, 17, 29, 0.985)'
-                : '#ffffff',
+              t.palette.mode === 'dark' ? 'rgba(3, 17, 29, 0.985)' : '#ffffff',
             backgroundImage: (t: Theme) =>
               t.palette.mode === 'dark'
                 ? 'radial-gradient(circle at 13% 6%, rgba(24,189,242,0.13), transparent 30%), linear-gradient(180deg, rgba(5,24,39,0.99) 0%, rgba(3,13,23,0.995) 100%)'
@@ -765,9 +779,7 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
               sx={formFieldSx}
             />
             {coinType === Coin.QORT && nameSearchOpen && (
-              <ClickAwayListener
-                onClickAway={() => setNameSearchOpen(false)}
-              >
+              <ClickAwayListener onClickAway={() => setNameSearchOpen(false)}>
                 <Box
                   sx={{
                     bgcolor: (t: Theme) =>
@@ -913,6 +925,9 @@ export const AddressFormDialog: React.FC<AddressFormDialogProps> = ({
               error={!!addressError}
               helperText={
                 addressError ||
+                (coinType === Coin.ARRR && arrrValidation.status === 'pending'
+                  ? t('core:send.arrr_validating')
+                  : EMPTY_STRING) ||
                 (coinType === Coin.QORT
                   ? addressConfirmed
                     ? t('core:address_book_ui.address_confirmed')

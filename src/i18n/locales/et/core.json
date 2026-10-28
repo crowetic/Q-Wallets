@@ -237,7 +237,10 @@
     "optional_memo": "Valikuline memo",
     "symbol_memo": "{{symbol}} memo",
     "symbol_address_placeholder": "{{symbol}} aadress",
-    "symbol_receiver_address": "{{symbol}} saaja aadress"
+    "symbol_receiver_address": "{{symbol}} saaja aadress",
+    "arrr_address_invalid": "Valitud Core ei tunne seda ARRR-aadressi ära.",
+    "arrr_validation_unavailable": "Aadressi kontrollimine pole saadaval. Kontrolli Core’i ühendust ja versiooni.",
+    "arrr_validating": "Aadressi kontrollitakse Core’i abil…"
   },
   "filters": {
     "all": "Kõik",

@@ -42,6 +42,7 @@ const NumericFormat = _NumericFormat as FC<
 type ExternalSendFormProps = {
   addressError: boolean;
   addressHelperText: ReactNode;
+  addressValidationPending?: boolean;
   addressInputId: string;
   amount: number;
   afterRecipientContent?: ReactNode;
@@ -176,6 +177,7 @@ const infoIconSx = {
 export function ExternalSendForm({
   addressError,
   addressHelperText,
+  addressValidationPending = false,
   addressInputId,
   afterRecipientContent,
   amount,
@@ -470,7 +472,11 @@ export function ExternalSendForm({
               placeholder={t('core:send.symbol_address_placeholder', {
                 symbol,
               })}
-              helperText={addressError ? addressHelperText : undefined}
+              helperText={
+                addressError || addressValidationPending
+                  ? addressHelperText
+                  : undefined
+              }
               slotProps={{
                 htmlInput: {
                   'aria-label': t('core:send.symbol_receiver_address', {

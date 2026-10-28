@@ -237,7 +237,10 @@
     "optional_memo": "Optional memo",
     "symbol_memo": "{{symbol}} memo",
     "symbol_address_placeholder": "{{symbol}} address",
-    "symbol_receiver_address": "{{symbol}} receiver address"
+    "symbol_receiver_address": "{{symbol}} receiver address",
+    "arrr_address_invalid": "The selected Core does not recognize this ARRR address.",
+    "arrr_validation_unavailable": "Address validation is unavailable. Check your Core connection and version.",
+    "arrr_validating": "Checking address with Core…"
   },
   "filters": {
     "all": "All",
