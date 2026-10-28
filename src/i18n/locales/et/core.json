@@ -240,7 +240,8 @@
     "symbol_receiver_address": "{{symbol}} saaja aadress",
     "arrr_address_invalid": "Valitud Core ei tunne seda ARRR-aadressi ära.",
     "arrr_validation_unavailable": "Aadressi kontrollimine pole saadaval. Kontrolli Core’i ühendust ja versiooni.",
-    "arrr_validating": "Aadressi kontrollitakse Core’i abil…"
+    "arrr_validating": "Aadressi kontrollitakse Core’i abil…",
+    "arrr_send_failed": "ARRR-i saatmine ebaõnnestus. Kontrolli rahakoti olekut ja ühendust Core’iga."
   },
   "filters": {
     "all": "Kõik",

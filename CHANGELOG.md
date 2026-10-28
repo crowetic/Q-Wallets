@@ -2,6 +2,13 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.3.7] - 2026-10-28
+
+### Fixed
+
+- Show the wallet host's actual ARRR send error instead of replacing every failure with a generic message. Keep failed-transfer details available for review and leave the error visible until dismissed.
+- Handle returned error objects as failures and close the submitting dialog consistently. Report recipient-validation failures separately and preserve the draft when sending fails. No automatic payment retry is performed.
+
 ## [1.3.6] - 2026-10-28
 
 ### Fixed

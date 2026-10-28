@@ -241,7 +241,8 @@
     "symbol_receiver_address": "Адрес получателя {{symbol}}",
     "arrr_address_invalid": "Выбранный Core не распознаёт этот адрес ARRR.",
     "arrr_validation_unavailable": "Проверка адреса недоступна. Проверьте подключение и версию Core.",
-    "arrr_validating": "Проверка адреса через Core…"
+    "arrr_validating": "Проверка адреса через Core…",
+    "arrr_send_failed": "Не удалось отправить ARRR. Проверьте состояние кошелька и подключение к Core."
   },
   "filters": {
     "all": "Все",

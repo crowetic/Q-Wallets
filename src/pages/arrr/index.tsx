@@ -73,6 +73,7 @@ import {
 } from '../../components/ExternalSendForm';
 import { calculateMaxSendable } from '../../utils/maxSendable';
 import { useArrrAddressValidation } from '../../hooks/useArrrAddressValidation';
+import { walletErrorMessage } from '../../utils/walletErrorMessage';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -193,6 +194,7 @@ export default function PirateWallet() {
   const [openTxArrrSubmit, setOpenTxArrrSubmit] = useState(false);
   const [openSendArrrSuccess, setOpenSendArrrSuccess] = useState(false);
   const [openSendArrrError, setOpenSendArrrError] = useState(false);
+  const [sendArrrError, setSendArrrError] = useState(EMPTY_STRING);
   const [openArrrAddressBook, setOpenArrrAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
   const [_retry, setRetry] = useState(false);
@@ -374,11 +376,23 @@ export default function PirateWallet() {
   const sendArrrRequest = async () => {
     // Conservative revalidation: never submit more than the safely-spendable
     // max, even if state changed (e.g. balance refresh) after input.
-    if (
-      arrrAmount <= 0 ||
-      arrrAmount > maxSendableArrrCoin() ||
-      recipientValidation.status !== 'valid'
-    ) {
+    setSendArrrError(EMPTY_STRING);
+    if (!Number.isFinite(arrrAmount) || arrrAmount <= 0) {
+      setSendArrrError(t('core:message.error.amount_positive'));
+      setOpenSendArrrError(true);
+      return;
+    }
+    if (arrrAmount > maxSendableArrrCoin()) {
+      setSendArrrError(
+        t('core:message.error.amount_exceeds_balance', {
+          maxAmount: maxSendableArrrCoin(),
+        })
+      );
+      setOpenSendArrrError(true);
+      return;
+    }
+    if (recipientValidation.status !== 'valid') {
+      setSendArrrError(t('core:send.arrr_validation_unavailable'));
       setOpenSendArrrError(true);
       return;
     }
@@ -386,11 +400,13 @@ export default function PirateWallet() {
     try {
       // Recheck through the selected Core immediately before handing off the
       // payment. No wallet secrets are needed for address validation.
-      if (!(await validateArrrAddress(arrrRecipient))) {
-        setOpenTxArrrSubmit(false);
-        setOpenSendArrrError(true);
-        return;
+      let recipientValid: boolean;
+      try {
+        recipientValid = await validateArrrAddress(arrrRecipient);
+      } catch {
+        throw new Error(t('core:send.arrr_validation_unavailable'));
       }
+      if (!recipientValid) throw new Error(t('core:send.arrr_address_invalid'));
       const sendRequest = await qortalRequest({
         action: 'SEND_COIN',
         coin: Coin.ARRR,
@@ -398,28 +414,27 @@ export default function PirateWallet() {
         amount: arrrAmount,
         memo: arrrMemo,
       });
-      if (!sendRequest?.error) {
-        setArrrAmount(0);
-        setArrrRecipient(EMPTY_STRING);
-        setArrrRecipientDisplayName(EMPTY_STRING);
-        setArrrMemo(EMPTY_STRING);
-        setOpenTxArrrSubmit(false);
-        setOpenSendArrrSuccess(true);
-        setIsLoadingWalletBalanceArrr(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        getWalletBalanceArrr();
-      }
-    } catch (error) {
+      if (sendRequest?.error) throw sendRequest;
+      if (sendRequest == null) throw new Error(t('core:send.arrr_send_failed'));
       setArrrAmount(0);
       setArrrRecipient(EMPTY_STRING);
       setArrrRecipientDisplayName(EMPTY_STRING);
       setArrrMemo(EMPTY_STRING);
       setOpenTxArrrSubmit(false);
-      setOpenSendArrrError(true);
+      setOpenSendArrrSuccess(true);
       setIsLoadingWalletBalanceArrr(true);
       await timeoutDelay(TIME_SECONDS_3);
       getWalletBalanceArrr();
-      console.error('ERROR SENDING ARRR', error);
+    } catch (error) {
+      const message = walletErrorMessage(
+        error,
+        t('core:send.arrr_send_failed')
+      );
+      setSendArrrError(message);
+      setOpenSendArrrError(true);
+      console.error('ERROR SENDING ARRR', message);
+    } finally {
+      setOpenTxArrrSubmit(false);
     }
   };
 
@@ -912,20 +927,14 @@ export default function PirateWallet() {
             })}
           </Alert>
         </Snackbar>
-        <Snackbar
-          open={openSendArrrError}
-          autoHideDuration={TIME_SECONDS_4}
-          onClose={handleCloseSendArrrError}
-        >
+        <Snackbar open={openSendArrrError} onClose={handleCloseSendArrrError}>
           <Alert
             onClose={handleCloseSendArrrError}
             severity="error"
             variant="filled"
-            sx={{ width: '100%' }}
+            sx={{ width: '100%', userSelect: 'text' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendArrrError || t('core:send.arrr_send_failed')}
           </Alert>
         </Snackbar>
         <ExternalSendForm

@@ -240,7 +240,8 @@
     "symbol_receiver_address": "Direccion receptora de {{symbol}}",
     "arrr_address_invalid": "El Core seleccionado no reconoce esta dirección ARRR.",
     "arrr_validation_unavailable": "La validación de direcciones no está disponible. Comprueba la conexión y la versión de tu Core.",
-    "arrr_validating": "Comprobando la dirección con Core…"
+    "arrr_validating": "Comprobando la dirección con Core…",
+    "arrr_send_failed": "No se pudo enviar ARRR. Comprueba el estado de tu monedero y la conexión con Core."
   },
   "filters": {
     "all": "Todo",

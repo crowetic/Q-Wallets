@@ -126,5 +126,45 @@ describe('ARRR transfer uses Core recipient validation', () => {
     expect(qortalRequest).not.toHaveBeenCalledWith(
       expect.objectContaining({ action: 'SEND_COIN' })
     );
+    expect(
+      screen.getByText('core:send.arrr_address_invalid')
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('recipient')).toHaveValue(address);
+  });
+
+  it.each([
+    new Error(
+      'ERR_RESCAN_REQUIRED: Wallet requires a full rescan before spending.'
+    ),
+    'ERR_RESCAN_REQUIRED: Wallet requires a full rescan before spending.',
+  ])(
+    'preserves a rejected host error and the transfer draft',
+    async (error) => {
+      await prepareTransfer();
+      vi.mocked(qortalRequest).mockRejectedValueOnce(error);
+      await act(async () => fireEvent.click(screen.getByText('Pay')));
+      expect(
+        screen.getByText(
+          'ERR_RESCAN_REQUIRED: Wallet requires a full rescan before spending.'
+        )
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText('recipient')).toHaveValue(address);
+      expect(screen.getByLabelText('amount')).toHaveValue('1');
+    }
+  );
+
+  it('displays structured error responses instead of remaining in the submitting state', async () => {
+    await prepareTransfer();
+    vi.mocked(qortalRequest).mockResolvedValueOnce({
+      error: 1205,
+      message: 'Wallet busy. Please try again later.',
+    });
+    await act(async () => fireEvent.click(screen.getByText('Pay')));
+    expect(
+      screen.getByText('Wallet busy. Please try again later.')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('core:message.generic.sent_transaction')
+    ).not.toBeInTheDocument();
   });
 });

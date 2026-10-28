@@ -240,7 +240,8 @@
     "symbol_receiver_address": "{{symbol}}-Empfaengeradresse",
     "arrr_address_invalid": "Der ausgewählte Core erkennt diese ARRR-Adresse nicht.",
     "arrr_validation_unavailable": "Die Adressprüfung ist nicht verfügbar. Prüfen Sie die Verbindung und Version Ihres Core.",
-    "arrr_validating": "Adresse wird mit Core geprüft…"
+    "arrr_validating": "Adresse wird mit Core geprüft…",
+    "arrr_send_failed": "ARRR konnte nicht gesendet werden. Prüfen Sie den Wallet-Status und die Verbindung zum Core."
   },
   "filters": {
     "all": "Alle",

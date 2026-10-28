@@ -240,7 +240,8 @@
     "symbol_receiver_address": "عنوان مستلم {{symbol}}",
     "arrr_address_invalid": "لا يتعرف Core المحدد على عنوان ARRR هذا.",
     "arrr_validation_unavailable": "التحقق من العنوان غير متاح. تحقق من اتصال Core وإصداره.",
-    "arrr_validating": "جارٍ التحقق من العنوان باستخدام Core…"
+    "arrr_validating": "جارٍ التحقق من العنوان باستخدام Core…",
+    "arrr_send_failed": "تعذّر إرسال ARRR. تحقق من حالة المحفظة واتصال Core."
   },
   "filters": {
     "all": "الكل",

@@ -241,7 +241,8 @@
     "symbol_receiver_address": "Endereco de recebimento {{symbol}}",
     "arrr_address_invalid": "O Core selecionado não reconhece este endereço ARRR.",
     "arrr_validation_unavailable": "A validação de endereços não está disponível. Verifique a conexão e a versão do seu Core.",
-    "arrr_validating": "Verificando o endereço com o Core…"
+    "arrr_validating": "Verificando o endereço com o Core…",
+    "arrr_send_failed": "Falha ao enviar ARRR. Verifique o estado da carteira e a conexão com o Core."
   },
   "filters": {
     "all": "Tudo",

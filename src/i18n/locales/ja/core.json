@@ -241,7 +241,8 @@
     "symbol_receiver_address": "{{symbol}}受取アドレス",
     "arrr_address_invalid": "選択したCoreはこのARRRアドレスを認識できません。",
     "arrr_validation_unavailable": "アドレスを検証できません。Coreの接続とバージョンを確認してください。",
-    "arrr_validating": "Coreでアドレスを確認中…"
+    "arrr_validating": "Coreでアドレスを確認中…",
+    "arrr_send_failed": "ARRRの送信に失敗しました。ウォレットの状態とCoreへの接続を確認してください。"
   },
   "filters": {
     "all": "すべて",

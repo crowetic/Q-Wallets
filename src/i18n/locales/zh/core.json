@@ -241,7 +241,8 @@
     "symbol_receiver_address": "{{symbol}} 接收地址",
     "arrr_address_invalid": "所选 Core 无法识别此 ARRR 地址。",
     "arrr_validation_unavailable": "地址验证不可用。请检查 Core 的连接和版本。",
-    "arrr_validating": "正在通过 Core 检查地址…"
+    "arrr_validating": "正在通过 Core 检查地址…",
+    "arrr_send_failed": "ARRR 发送失败。请检查钱包状态和 Core 连接。"
   },
   "filters": {
     "all": "全部",

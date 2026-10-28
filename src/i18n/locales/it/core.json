@@ -240,7 +240,8 @@
     "symbol_receiver_address": "Indirizzo destinatario {{symbol}}",
     "arrr_address_invalid": "Il Core selezionato non riconosce questo indirizzo ARRR.",
     "arrr_validation_unavailable": "La convalida degli indirizzi non è disponibile. Controlla la connessione e la versione del tuo Core.",
-    "arrr_validating": "Verifica dell’indirizzo con Core…"
+    "arrr_validating": "Verifica dell’indirizzo con Core…",
+    "arrr_send_failed": "Invio di ARRR non riuscito. Controlla lo stato del portafoglio e la connessione al Core."
   },
   "filters": {
     "all": "Tutto",

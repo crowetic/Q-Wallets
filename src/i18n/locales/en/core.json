@@ -240,7 +240,8 @@
     "symbol_receiver_address": "{{symbol}} receiver address",
     "arrr_address_invalid": "The selected Core does not recognize this ARRR address.",
     "arrr_validation_unavailable": "Address validation is unavailable. Check your Core connection and version.",
-    "arrr_validating": "Checking address with Core…"
+    "arrr_validating": "Checking address with Core…",
+    "arrr_send_failed": "ARRR send failed. Check your wallet status and Core connection."
   },
   "filters": {
     "all": "All",
