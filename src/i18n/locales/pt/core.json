@@ -214,7 +214,9 @@
     "address_book_for_symbol": "Livro de enderecos ({{symbol}})",
     "qortal_user": "Usuario Qortal",
     "receive": "receber",
-    "hide_qr": "Ocultar QR"
+    "hide_qr": "Ocultar QR",
+    "current_server": "Servidor atual",
+    "reconnecting": "Conexão interrompida. Tentando novamente..."
   },
   "send": {
     "to": "Para",

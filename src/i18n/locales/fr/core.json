@@ -213,7 +213,9 @@
     "address_book_for_symbol": "Carnet d'adresses ({{symbol}})",
     "qortal_user": "Utilisateur Qortal",
     "receive": "recevoir",
-    "hide_qr": "Masquer le QR"
+    "hide_qr": "Masquer le QR",
+    "current_server": "Serveur actuel",
+    "reconnecting": "Connexion interrompue. Nouvelle tentative..."
   },
   "send": {
     "to": "À",

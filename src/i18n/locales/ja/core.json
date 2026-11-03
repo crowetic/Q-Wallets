@@ -214,7 +214,9 @@
     "address_book_for_symbol": "アドレス帳 ({{symbol}})",
     "qortal_user": "Qortalユーザー",
     "receive": "受け取る",
-    "hide_qr": "QRを非表示"
+    "hide_qr": "QRを非表示",
+    "current_server": "現在のサーバー",
+    "reconnecting": "接続が中断されました。再試行しています..."
   },
   "send": {
     "to": "宛先",

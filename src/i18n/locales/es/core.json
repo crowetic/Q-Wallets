@@ -213,7 +213,9 @@
     "address_book_for_symbol": "Libreta de direcciones ({{symbol}})",
     "qortal_user": "Usuario de Qortal",
     "receive": "recibir",
-    "hide_qr": "Ocultar QR"
+    "hide_qr": "Ocultar QR",
+    "current_server": "Servidor actual",
+    "reconnecting": "Conexión interrumpida. Reintentando..."
   },
   "send": {
     "to": "Para",

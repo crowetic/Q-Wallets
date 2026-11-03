@@ -213,7 +213,9 @@
     "address_book_for_symbol": "دفتر العناوين ({{symbol}})",
     "qortal_user": "مستخدم Qortal",
     "receive": "استلام",
-    "hide_qr": "اخفاء QR"
+    "hide_qr": "اخفاء QR",
+    "current_server": "الخادم الحالي",
+    "reconnecting": "انقطع الاتصال. جارٍ إعادة المحاولة..."
   },
   "send": {
     "to": "إلى",

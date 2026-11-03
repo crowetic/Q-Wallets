@@ -213,7 +213,9 @@
     "address_book_for_symbol": "Adressbuch ({{symbol}})",
     "qortal_user": "Qortal-Benutzer",
     "receive": "empfangen",
-    "hide_qr": "QR ausblenden"
+    "hide_qr": "QR ausblenden",
+    "current_server": "Aktueller Server",
+    "reconnecting": "Verbindung unterbrochen. Erneuter Versuch..."
   },
   "send": {
     "to": "An",

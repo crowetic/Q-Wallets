@@ -214,7 +214,9 @@
     "address_book_for_symbol": "地址簿 ({{symbol}})",
     "qortal_user": "Qortal 用户",
     "receive": "接收",
-    "hide_qr": "隐藏 QR"
+    "hide_qr": "隐藏 QR",
+    "current_server": "当前服务器",
+    "reconnecting": "连接中断。正在重试..."
   },
   "send": {
     "to": "收款人",

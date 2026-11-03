@@ -214,7 +214,9 @@
     "address_book_for_symbol": "Адресная книга ({{symbol}})",
     "qortal_user": "Пользователь Qortal",
     "receive": "получить",
-    "hide_qr": "Скрыть QR"
+    "hide_qr": "Скрыть QR",
+    "current_server": "Текущий сервер",
+    "reconnecting": "Соединение прервано. Повторная попытка..."
   },
   "send": {
     "to": "Кому",

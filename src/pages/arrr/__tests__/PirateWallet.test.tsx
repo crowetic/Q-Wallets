@@ -114,6 +114,30 @@ describe('ARRR transfer uses Core recipient validation', () => {
         amount: 1,
       })
     );
+    expect(
+      screen.getByText('core:message.generic.sent_transaction')
+    ).toBeVisible();
+    expect(
+      screen.queryByText('core:send.arrr_send_failed')
+    ).not.toBeInTheDocument();
+    const balanceReads = vi
+      .mocked(qortalRequest)
+      .mock.calls.filter(
+        ([request]) => request.action === 'GET_WALLET_BALANCE'
+      ).length;
+    await act(() => vi.advanceTimersByTimeAsync(3000));
+    expect(
+      vi
+        .mocked(qortalRequest)
+        .mock.calls.filter(
+          ([request]) => request.action === 'GET_WALLET_BALANCE'
+        )
+    ).toHaveLength(balanceReads + 1);
+    expect(
+      vi
+        .mocked(qortalRequest)
+        .mock.calls.filter(([request]) => request.action === 'SEND_COIN')
+    ).toHaveLength(1);
   });
 
   it('does not hand off a payment if Core rejects the final recipient recheck', async () => {

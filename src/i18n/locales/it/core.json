@@ -213,7 +213,9 @@
     "address_book_for_symbol": "Rubrica ({{symbol}})",
     "qortal_user": "Utente Qortal",
     "receive": "ricevi",
-    "hide_qr": "Nascondi QR"
+    "hide_qr": "Nascondi QR",
+    "current_server": "Server attuale",
+    "reconnecting": "Connessione interrotta. Nuovo tentativo..."
   },
   "send": {
     "to": "A",

@@ -42,7 +42,6 @@ import {
   MouseEvent,
   SyntheticEvent,
   useContext,
-  useEffect,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,13 +49,9 @@ import {
   ARRR_FEE,
   EMPTY_STRING,
   SEND_MAX_SAFETY_BUFFER_SATS,
-  TIME_MINUTES_2,
-  TIME_MINUTES_3,
-  TIME_MINUTES_5,
   TIME_SECONDS_2,
   TIME_SECONDS_3,
   TIME_SECONDS_4,
-  TIME_SECONDS_5,
 } from '../../common/constants';
 import {
   LightwalletDialog,
@@ -75,11 +70,7 @@ import {
 import { calculateMaxSendable } from '../../utils/maxSendable';
 import { useArrrAddressValidation } from '../../hooks/useArrrAddressValidation';
 import { walletErrorMessage } from '../../utils/walletErrorMessage';
-import {
-  ARRR_TRANSACTION_RETRY_DELAY_MS,
-  hasUnresolvedArrrRecipients,
-  requestArrrTransactionsWithRetry,
-} from '../../utils/arrrTransactionRetry';
+import { useArrrWalletData } from '../../hooks/useArrrWalletData';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -161,24 +152,25 @@ function TablePaginationActions(props: TablePaginationActionsProps) {
 
 export default function PirateWallet() {
   const { t } = useTranslation(['core']);
-  const { isUsingGateway } = useContext(WalletContext);
-  const [isSynced, setIsSynced] = useState(false);
-  const [syncStatus, setSyncStatus] = useState(EMPTY_STRING);
-  const [walletInfoArrr, setWalletInfoArrr] = useState<any>({});
-  const [walletBalanceArrr, setWalletBalanceArrr] = useState<any>(0);
-  const [_isLoadingWalletInfoArrr, setIsLoadingWalletInfoArrr] =
-    useState<boolean>(true);
-  const [isLoadingWalletBalanceArrr, setIsLoadingWalletBalanceArrr] =
-    useState<boolean>(true);
-  const [allLightwalletServersArrr, setAllLightwalletServersArrr] =
-    useState<any>([]);
-  const [currentLightwalletServerArrr, setCurrentLightwalletServerArrr] =
-    useState<any>([]);
-  const [_changeServer, setChangeServer] = useState(false);
+  const { isUsingGateway, address: account } = useContext(WalletContext);
+  const {
+    isSynced,
+    syncStatus,
+    walletInfo: walletInfoArrr,
+    balance: walletBalanceArrr,
+    isBalanceLoading: isLoadingWalletBalanceArrr,
+    servers: allLightwalletServersArrr,
+    transactions: transactionsArrr,
+    isTransactionsLoading: isLoadingArrrTransactions,
+    retry: handleRetry,
+    refreshBalance: getWalletBalanceArrr,
+    refreshServers: getLightwalletServersArrr,
+    refreshTransactions: getTransactionsArrr,
+  } = useArrrWalletData(!isUsingGateway, account);
+  const currentLightwalletServerArrr = allLightwalletServersArrr.filter(
+    (server) => server.isCurrent
+  );
   const [arrrMemo, setArrrMemo] = useState(EMPTY_STRING);
-  const [transactionsArrr, setTransactionsArrr] = useState<any>([]);
-  const [isLoadingArrrTransactions, setIsLoadingArrrTransactions] =
-    useState<boolean>(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [copyArrrTxHash, setCopyArrrTxHash] = useState(EMPTY_STRING);
@@ -202,13 +194,12 @@ export default function PirateWallet() {
   const [sendArrrError, setSendArrrError] = useState(EMPTY_STRING);
   const [openArrrAddressBook, setOpenArrrAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
-  const [_retry, setRetry] = useState(false);
 
   // Safely-spendable max: integer-satoshi math plus a small safety buffer so
   // the prefilled amount never lands on/above the host's spendable cutoff.
   const maxSendableArrrCoin = () =>
     calculateMaxSendable(
-      walletBalanceArrr,
+      walletBalanceArrr ?? 0,
       ARRR_FEE,
       SEND_MAX_SAFETY_BUFFER_SATS
     );
@@ -424,9 +415,7 @@ export default function PirateWallet() {
       setArrrMemo(EMPTY_STRING);
       setOpenTxArrrSubmit(false);
       setOpenSendArrrSuccess(true);
-      setIsLoadingWalletBalanceArrr(true);
-      await timeoutDelay(TIME_SECONDS_3);
-      getWalletBalanceArrr();
+      void getWalletBalanceArrr(TIME_SECONDS_3);
     } catch (error) {
       const message = walletErrorMessage(
         error,
@@ -440,220 +429,9 @@ export default function PirateWallet() {
     }
   };
 
-  const getWalletInfoArrr = async () => {
-    setIsLoadingWalletInfoArrr(true);
-    try {
-      const response = await qortalRequest({
-        action: 'GET_USER_WALLET',
-        coin: Coin.ARRR,
-      });
-      if (!response?.error) {
-        setWalletInfoArrr(response);
-      }
-    } catch (error) {
-      setWalletInfoArrr({});
-      console.error('ERROR GET ARRR WALLET INFO', error);
-    } finally {
-      setIsLoadingWalletInfoArrr(false);
-    }
-  };
-
-  const getWalletBalanceArrr = async () => {
-    try {
-      setIsLoadingWalletBalanceArrr(true);
-
-      const response = await qortalRequestWithTimeout(
-        {
-          action: 'GET_WALLET_BALANCE',
-          coin: Coin.ARRR,
-        },
-        TIME_MINUTES_2
-      );
-      if (!response?.error) {
-        setWalletBalanceArrr(response);
-      }
-    } catch (error: any) {
-      setWalletBalanceArrr(null);
-      console.error('ERROR GET ARRR BALANCE', error);
-    } finally {
-      setIsLoadingWalletBalanceArrr(false);
-    }
-  };
-
-  const getUpdatedWalletBalance = () => {
-    const intervalGetWalletBalanceArrr = setInterval(() => {
-      getWalletBalanceArrr();
-    }, TIME_MINUTES_3);
-    getWalletBalanceArrr();
-    return () => {
-      clearInterval(intervalGetWalletBalanceArrr);
-    };
-  };
-
-  const getLightwalletServersArrr = async () => {
-    try {
-      const response = await qortalRequest({
-        action: 'GET_CROSSCHAIN_SERVER_INFO',
-        coin: Coin.ARRR,
-      });
-      if (!response?.error) {
-        setAllLightwalletServersArrr(response);
-        let currentArrrServer = response.filter(function (item: {
-          isCurrent: boolean;
-        }) {
-          return item.isCurrent == true;
-        });
-        setCurrentLightwalletServerArrr(currentArrrServer);
-      }
-    } catch (error) {
-      setAllLightwalletServersArrr({});
-      console.error('ERROR GET ARRR SERVERS INFO', error);
-    }
-  };
-
-  const getTransactionsArrr = async () => {
-    try {
-      setIsLoadingArrrTransactions(true);
-      const requestTransactions = () =>
-        qortalRequestWithTimeout(
-          {
-            action: 'GET_USER_WALLET_TRANSACTIONS',
-            coin: Coin.ARRR,
-          },
-          TIME_MINUTES_5
-        );
-      const response =
-        await requestArrrTransactionsWithRetry(requestTransactions);
-      const compareFn = (
-        a: { timestamp: number },
-        b: { timestamp: number }
-      ) => {
-        return b.timestamp - a.timestamp;
-      };
-      const sortedArrrTransactions = response.sort(compareFn);
-      setTransactionsArrr(sortedArrrTransactions);
-      setIsLoadingArrrTransactions(false);
-
-      if (hasUnresolvedArrrRecipients(response)) {
-        // Render the usable history immediately. Native Core has already
-        // cached every exact recipient it recovered, so this quiet follow-up
-        // only spends time on txids that missed the first bounded pass.
-        void (async () => {
-          await timeoutDelay(ARRR_TRANSACTION_RETRY_DELAY_MS);
-          try {
-            const enrichedResponse = await requestTransactions();
-            if (!enrichedResponse?.error && Array.isArray(enrichedResponse)) {
-              setTransactionsArrr(enrichedResponse.sort(compareFn));
-            }
-          } catch (error) {
-            console.info(
-              'ARRR recipient enrichment will continue on the next refresh',
-              error
-            );
-          }
-        })();
-      }
-    } catch (error) {
-      setIsLoadingArrrTransactions(false);
-      setTransactionsArrr([]);
-      console.error('ERROR GET ARRR TRANSACTIONS', error);
-    }
-  };
-
-  const getArrrSyncStatus = async () => {
-    try {
-      let counter = 0;
-      let counter2 = 0;
-      while (!isSynced && counter < 36 && counter2 < 60) {
-        const response = await qortalRequest({
-          action: 'GET_ARRR_SYNC_STATUS',
-        });
-        if (!response?.error) {
-          if (
-            response.indexOf('<') > -1 ||
-            response !== 'Synchronized' ||
-            response === 'Not initialized yet'
-          ) {
-            if (response.indexOf('<') > -1) {
-              setSyncStatus(
-                t('core:message.error.pirate_chain_no_server', {
-                  postProcess: 'capitalizeAll',
-                })
-              );
-              setChangeServer(false);
-              setIsSynced(false);
-              counter = 37;
-            } else if (response === 'Not initialized yet') {
-              setChangeServer(false);
-              setSyncStatus(
-                t('core:message.generic.not_initialized_yet', {
-                  postProcess: 'capitalizeAll',
-                })
-              );
-              setIsSynced(false);
-              counter += 1;
-              await new Promise((resolve) =>
-                setTimeout(resolve, TIME_SECONDS_5)
-              );
-            } else if (response === 'Initializing wallet...') {
-              setChangeServer(false);
-              setSyncStatus(
-                t('core:message.generic.initializing_wallet', {
-                  postProcess: 'capitalizeAll',
-                })
-              );
-              setIsSynced(false);
-              counter2 += 1;
-              await new Promise((resolve) =>
-                setTimeout(resolve, TIME_SECONDS_5)
-              );
-            } else {
-              setChangeServer(false);
-              setSyncStatus(response);
-              setIsSynced(false);
-              await new Promise((resolve) =>
-                setTimeout(resolve, TIME_SECONDS_5)
-              );
-            }
-          } else {
-            setIsSynced(true);
-            setSyncStatus(EMPTY_STRING);
-            setChangeServer(false);
-            getWalletInfoArrr();
-            await new Promise((resolve) => setTimeout(resolve, TIME_SECONDS_3));
-            getUpdatedWalletBalance();
-            await new Promise((resolve) => setTimeout(resolve, TIME_SECONDS_3));
-            getLightwalletServersArrr();
-            await new Promise((resolve) => setTimeout(resolve, TIME_SECONDS_3));
-            getTransactionsArrr();
-            return;
-          }
-        }
-      }
-      setIsSynced(false);
-      setSyncStatus(
-        t('core:message.error.pirate_chain_no_server', {
-          postProcess: 'capitalizeAll',
-        })
-      );
-      setChangeServer(true);
-      return;
-    } catch (error) {
-      setSyncStatus(String(error));
-      setIsSynced(false);
-      setRetry(true);
-      console.error('ERROR GET ARRR SYNC STATUS', error);
-    }
-  };
-
   const handleOpenArrrServerChange = async () => {
     await getLightwalletServersArrr();
     setOpenArrrServerChange(true);
-  };
-
-  const handleRetry = async () => {
-    setRetry(false);
-    await getArrrSyncStatus();
   };
 
   const handleLoadingRefreshArrr = async () => {
@@ -661,10 +439,6 @@ export default function PirateWallet() {
     await getTransactionsArrr();
     setLoadingRefreshArrr(false);
   };
-
-  useEffect(() => {
-    getArrrSyncStatus();
-  }, []);
 
   if (isUsingGateway) {
     return (
@@ -691,9 +465,7 @@ export default function PirateWallet() {
       });
       if (!setServer?.error) {
         setOpenArrrLightwallet(false);
-        await getLightwalletServersArrr();
-        await getWalletBalanceArrr();
-        await getTransactionsArrr();
+        handleRetry();
       }
     } catch (error) {
       await getLightwalletServersArrr();
@@ -717,13 +489,11 @@ export default function PirateWallet() {
       });
       if (!setServer?.error) {
         setOpenArrrServerChange(false);
-        await getLightwalletServersArrr();
-        await getArrrSyncStatus();
+        handleRetry();
       }
     } catch (error) {
       setOpenArrrServerChange(false);
-      await getLightwalletServersArrr();
-      await getArrrSyncStatus();
+      handleRetry();
       console.error('ERROR GET ARRR SERVERS INFO', error);
     }
   };
@@ -755,7 +525,7 @@ export default function PirateWallet() {
         memo: t('core:memo', {
           postProcess: 'capitalizeFirstChar',
         }),
-        noTransactions: 'No transactions.',
+        noTransactions: t('core:wallet.no_transactions'),
         receiver: t('core:receiver', {
           postProcess: 'capitalizeFirstChar',
         }),
@@ -1143,11 +913,13 @@ export default function PirateWallet() {
           <WalletCard sx={{ overflow: 'hidden', width: '100%' }}>
             <Box sx={{ display: 'grid', gap: 1.5, p: { xs: 2, md: 2.25 } }}>
               <Typography sx={{ fontWeight: 600 }}>
-                Lightwallet server
+                {t('core:message.generic.lightwallet_server', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
               </Typography>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Current server
+                  {t('core:wallet.current_server')}
                 </Typography>
                 <Typography
                   sx={{
@@ -1174,11 +946,15 @@ export default function PirateWallet() {
                 onClick={handleOpenArrrServerChange}
                 variant="outlined"
               >
-                Change server
+                {t('core:action.change_server', {
+                  postProcess: 'capitalizeFirstChar',
+                })}
               </Button>
-              {!isSynced && !isLoadingWalletBalanceArrr && (
+              {!isSynced && (
                 <Button fullWidth onClick={handleRetry} variant="contained">
-                  Retry
+                  {t('core:action.retry', {
+                    postProcess: 'capitalizeFirstChar',
+                  })}
                 </Button>
               )}
             </Box>

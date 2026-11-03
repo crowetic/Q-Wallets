@@ -2,6 +2,19 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.3.9] - 2026-11-03
+
+### Fixed
+
+- ARRR automatically retries interrupted startup requests, including sync status and wallet-address loading, so a temporary host or Core connection failure no longer requires switching coins. Retry remains available before the first balance loads.
+- Bound wallet read waits, pace failed requests, and stop obsolete polling and refresh work when leaving ARRR, changing accounts, retrying or selecting a server. Keep one balance poller per wallet session and retry failed initial balance and server-info reads.
+- Preserve the existing transaction-history retry and recipient enrichment, and cancel their pending follow-ups when the wallet session ends. Payment submission is never retried automatically.
+- Translate the ARRR connection card, Retry action and empty transaction message using all supported languages.
+
+### Tests
+
+- Added component regressions for rejected, malformed, busy and stalled startup requests; late responses; initial data failures; account changes; Retry; gateway handling; and timer cleanup under React Strict Mode.
+
 ## [1.3.8] - 2026-11-03
 
 ### Fixed

@@ -213,7 +213,9 @@
     "address_book_for_symbol": "Aadressiraamat ({{symbol}})",
     "qortal_user": "Qortali kasutaja",
     "receive": "vota vastu",
-    "hide_qr": "Peida QR"
+    "hide_qr": "Peida QR",
+    "current_server": "Praegune server",
+    "reconnecting": "Ühendus katkes. Proovin uuesti..."
   },
   "send": {
     "to": "Saaja",
