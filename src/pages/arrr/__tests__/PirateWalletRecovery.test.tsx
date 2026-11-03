@@ -42,8 +42,21 @@ vi.mock('../../../components/WalletWorkspace', () => ({
       {rows.map((row) => row.txHash).join(',')}
     </output>
   ),
-  WalletTransactionsCard: ({ children }: { children: ReactNode }) => (
-    <>{children}</>
+  WalletTransactionsCard: ({
+    children,
+    onRefresh,
+    isRefreshing,
+  }: {
+    children: ReactNode;
+    onRefresh: () => void;
+    isRefreshing: boolean;
+  }) => (
+    <>
+      <button onClick={onRefresh} disabled={isRefreshing}>
+        Refresh history
+      </button>
+      {children}
+    </>
   ),
   WalletTransactionsLoader: () => null,
 }));
@@ -381,6 +394,196 @@ describe('ARRR startup recovery', () => {
       'enriched-history'
     );
     expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(2);
+  });
+
+  it('continues recovering after the first follow-up still has unknown recipients', async () => {
+    const request = vi.mocked(qortalRequest).getMockImplementation()!;
+    let attempts = 0;
+    vi.mocked(qortalRequest).mockImplementation(async (options) => {
+      if (String(options.action) === 'GET_USER_WALLET_TRANSACTIONS') {
+        return [
+          {
+            txHash:
+              ++attempts < 3 ? 'still-incomplete' : 'eventually-recovered',
+            outputs: [{ address: attempts < 3 ? '[UNKNOWN]' : address }],
+          },
+        ];
+      }
+      return request(options);
+    });
+    const view = render(wallet());
+    await settle();
+    await advance(TIME_SECONDS_5);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(2);
+    expect(screen.getByTestId('transactions')).toHaveTextContent(
+      'still-incomplete'
+    );
+    await advance(TIME_SECONDS_5 * 3);
+    expect(screen.getByTestId('transactions')).toHaveTextContent(
+      'eventually-recovered'
+    );
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(3);
+    await advance(TIME_MINUTES_3);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(3);
+    view.unmount();
+  });
+
+  it('keeps history visible after a failed follow-up and tries again later', async () => {
+    const request = vi.mocked(qortalRequest).getMockImplementation()!;
+    let attempts = 0;
+    vi.mocked(qortalRequest).mockImplementation(async (options) => {
+      if (String(options.action) === 'GET_USER_WALLET_TRANSACTIONS') {
+        ++attempts;
+        if (attempts === 2) throw new Error('Host request timed out');
+        return [
+          {
+            txHash: attempts === 1 ? 'usable-history' : 'recovered-history',
+            outputs: [{ address: attempts === 1 ? '[UNKNOWN]' : address }],
+          },
+        ];
+      }
+      return request(options);
+    });
+    render(wallet());
+    await settle();
+    await advance(TIME_SECONDS_5);
+    expect(screen.getByTestId('transactions')).toHaveTextContent(
+      'usable-history'
+    );
+    expect(
+      screen.getByRole('button', { name: 'Refresh history' })
+    ).toBeEnabled();
+    await advance(TIME_SECONDS_5 * 3);
+    expect(screen.getByTestId('transactions')).toHaveTextContent(
+      'recovered-history'
+    );
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(3);
+  });
+
+  it('backs off persistent unknowns to one quiet refresh per minute and cancels on leave', async () => {
+    const request = vi.mocked(qortalRequest).getMockImplementation()!;
+    vi.mocked(qortalRequest).mockImplementation(async (options) => {
+      if (String(options.action) === 'GET_USER_WALLET_TRANSACTIONS')
+        return [{ txHash: 'incomplete', outputs: [{ address: '[UNKNOWN]' }] }];
+      return request(options);
+    });
+    const view = render(wallet());
+    await settle();
+    await advance(5000 + 15000 + 30000 + 60000);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(5);
+    await advance(59999);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(5);
+    await advance(1);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(6);
+    view.unmount();
+    await advance(TIME_MINUTES_3);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(6);
+  });
+
+  it('does not poll transaction details just to reveal a private incoming sender', async () => {
+    const request = vi.mocked(qortalRequest).getMockImplementation()!;
+    vi.mocked(qortalRequest).mockImplementation(async (options) => {
+      if (String(options.action) === 'GET_USER_WALLET_TRANSACTIONS')
+        return [
+          {
+            txHash: 'incoming',
+            inputs: [{ address: '[PRIVATE]' }],
+            outputs: [{ address }],
+          },
+        ];
+      return request(options);
+    });
+    render(wallet());
+    await advance(TIME_MINUTES_3);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(1);
+  });
+
+  it('returns to the short delay when Core makes recipient progress', async () => {
+    const request = vi.mocked(qortalRequest).getMockImplementation()!;
+    let attempts = 0;
+    vi.mocked(qortalRequest).mockImplementation(async (options) => {
+      if (String(options.action) === 'GET_USER_WALLET_TRANSACTIONS') {
+        ++attempts;
+        return [
+          {
+            txHash: 'progressing',
+            outputs: [
+              { address: attempts < 3 ? '[UNKNOWN]' : address },
+              { address: attempts < 4 ? '[UNKNOWN]' : address },
+            ],
+          },
+        ];
+      }
+      return request(options);
+    });
+    render(wallet());
+    await advance(TIME_SECONDS_5 * 4);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(3);
+    await advance(TIME_SECONDS_5);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(4);
+    await advance(TIME_MINUTES_3);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(4);
+  });
+
+  it('shares a pending quiet read with manual refresh and ignores its old-session result', async () => {
+    const request = vi.mocked(qortalRequest).getMockImplementation()!;
+    let attempts = 0;
+    let resolveOld!: (response: unknown) => void;
+    vi.mocked(qortalRequest).mockImplementation(async (options) => {
+      if (String(options.action) === 'GET_USER_WALLET_TRANSACTIONS') {
+        if (++attempts === 2)
+          return new Promise((resolve) => {
+            resolveOld = resolve;
+          });
+        return [
+          {
+            txHash: attempts === 1 ? 'account-a-history' : 'account-b-history',
+            outputs: [{ address: attempts === 1 ? '[UNKNOWN]' : address }],
+          },
+        ];
+      }
+      return request(options);
+    });
+    const view = render(wallet());
+    await advance(TIME_SECONDS_5);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh history' }));
+    await settle();
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(2);
+    view.rerender(wallet('account-b'));
+    await settle();
+    expect(screen.getByTestId('transactions')).toHaveTextContent(
+      'account-b-history'
+    );
+    await act(async () =>
+      resolveOld([
+        { txHash: 'obsolete-account-a-result', outputs: [{ address }] },
+      ])
+    );
+    expect(screen.getByTestId('transactions')).toHaveTextContent(
+      'account-b-history'
+    );
+    await advance(TIME_MINUTES_3);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(3);
+  });
+
+  it('allows manual refreshes to finish while background recipient recovery remains pending', async () => {
+    const request = vi.mocked(qortalRequest).getMockImplementation()!;
+    vi.mocked(qortalRequest).mockImplementation(async (options) => {
+      if (String(options.action) === 'GET_USER_WALLET_TRANSACTIONS')
+        return [{ txHash: 'incomplete', outputs: [{ address: '[UNKNOWN]' }] }];
+      return request(options);
+    });
+    render(wallet());
+    await settle();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh history' }));
+    await settle();
+    expect(
+      screen.getByRole('button', { name: 'Refresh history' })
+    ).toBeEnabled();
+    expect(screen.getByTestId('transactions')).toHaveTextContent('incomplete');
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(2);
+    await advance(TIME_SECONDS_5);
+    expect(callsFor('GET_USER_WALLET_TRANSACTIONS')).toHaveLength(3);
   });
 
   it.each(['retry', 'enrichment'])(

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Coin } from 'qapp-core';
 import {
+  TIME_MINUTES_1,
   TIME_MINUTES_2,
   TIME_MINUTES_3,
   TIME_MINUTES_5,
@@ -176,12 +177,25 @@ export const useArrrWalletData = (enabled: boolean, account: string | null) => {
       return serverRead;
     };
 
-    let transactionRead: Promise<void> | null = null;
-    const refreshTransactions = (): Promise<void> => {
-      if (signal.aborted) return Promise.resolve();
+    let transactionRead: Promise<WalletExternalTransactionRow[] | null> | null =
+      null;
+    let latestTransactions: WalletExternalTransactionRow[] = [];
+    let recoveringRecipients = false;
+    const unresolvedCount = (rows: WalletExternalTransactionRow[]) =>
+      rows.reduce(
+        (count, row) =>
+          count +
+          (row.outputs?.filter((output) => output.address === '[UNKNOWN]')
+            .length ?? 0),
+        0
+      );
+    const loadTransactions = (
+      quiet: boolean
+    ): Promise<WalletExternalTransactionRow[] | null> => {
+      if (signal.aborted) return Promise.resolve(null);
       if (transactionRead) return transactionRead;
       transactionRead = (async () => {
-        update({ isTransactionsLoading: true });
+        if (!quiet) update({ isTransactionsLoading: true });
         const requestTransactions = async () => {
           const response = await read<WalletExternalTransactionRow[]>(
             { action: 'GET_USER_WALLET_TRANSACTIONS', coin: Coin.ARRR },
@@ -192,37 +206,64 @@ export const useArrrWalletData = (enabled: boolean, account: string | null) => {
             throw new Error('Invalid ARRR transaction response');
           return response;
         };
-        const sort = (rows: WalletExternalTransactionRow[]) =>
-          [...rows].sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
         try {
-          const response = await requestArrrTransactionsWithRetry(
-            requestTransactions,
-            (delay) => pause(delay, signal)
-          );
-          update({
-            transactions: sort(response),
-            isTransactionsLoading: false,
-          });
-          if (hasUnresolvedArrrRecipients(response)) {
-            // Show usable history before the bounded recipient follow-up.
-            await pause(ARRR_TRANSACTION_RETRY_DELAY_MS, signal);
-            try {
-              update({ transactions: sort(await requestTransactions()) });
-            } catch (error) {
-              log(
-                'ARRR recipient enrichment will continue on the next refresh',
-                error
+          // Quiet polls already have their own backoff. Manual/initial reads
+          // retain the one-shot retry for a transient host timeout or busy wallet.
+          const response = quiet
+            ? await requestTransactions()
+            : await requestArrrTransactionsWithRetry(
+                requestTransactions,
+                (delay) => pause(delay, signal)
               );
-            }
-          }
+          if (signal.aborted) return null;
+          latestTransactions = [...response].sort(
+            (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)
+          );
+          update({ transactions: latestTransactions });
+          return latestTransactions;
         } catch (error) {
+          // Keep the usable history visible during a failed quiet refresh.
           log('ERROR GET ARRR TRANSACTIONS', error);
+          return null;
         } finally {
           update({ isTransactionsLoading: false });
           transactionRead = null;
         }
       })();
       return transactionRead;
+    };
+
+    const recoverRecipients = async () => {
+      if (recoveringRecipients || signal.aborted) return;
+      recoveringRecipients = true;
+      let delay = ARRR_TRANSACTION_RETRY_DELAY_MS;
+      try {
+        // Only unknown outputs are actionable. Shielded incoming senders marked
+        // [PRIVATE] do not become public through recipient recovery.
+        while (hasUnresolvedArrrRecipients(latestTransactions)) {
+          await pause(delay, signal);
+          if (!hasUnresolvedArrrRecipients(latestTransactions)) return;
+          const previousCount = unresolvedCount(latestTransactions);
+          const response = await loadTransactions(true);
+          delay =
+            response && unresolvedCount(response) < previousCount
+              ? ARRR_TRANSACTION_RETRY_DELAY_MS
+              : Math.min(
+                  TIME_MINUTES_1,
+                  Math.max(TIME_SECONDS_5 * 3, delay * 2)
+                );
+        }
+      } catch (error) {
+        if (!signal.aborted) log('ARRR recipient recovery stopped', error);
+      } finally {
+        recoveringRecipients = false;
+      }
+    };
+    const refreshTransactions = async (): Promise<void> => {
+      await loadTransactions(false);
+      // This loop owns its own timer, not the refresh promise. A manual refresh
+      // must finish even when a recipient cannot ever be recovered.
+      void recoverRecipients();
     };
 
     const pollBalance = async () => {

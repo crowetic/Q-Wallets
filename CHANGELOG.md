@@ -2,6 +2,18 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.3.10] - 2026-11-03
+
+### Fixed
+
+- Keep refreshing incomplete ARRR recipients while the wallet is open instead of stopping after one follow-up. Refresh quietly, back off from 5 seconds to at most once per minute when nothing changes, and stop when details are complete or the wallet session ends.
+- Preserve usable history after failed follow-up requests and let manual refresh finish independently of background recipient recovery. Private incoming senders do not trigger recipient polling; only unresolved outputs do.
+- Full progress also requires Core's recipient scheduling fix so failed or slow lookups cannot starve older transactions. Recoverable outgoing recipients can be filled in; shielded incoming sender identities are not exposed by this mechanism.
+
+### Tests
+
+- Cover delayed recovery beyond the first follow-up, transient failures, capped polling and cleanup, private senders, and manual refresh during recovery.
+
 ## [1.3.9] - 2026-11-03
 
 ### Fixed
