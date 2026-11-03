@@ -16,6 +16,7 @@ export const QORT_1_UNIT: number = 100000000;
 // 1000 sats = 0.00001 coin — negligible to the user, enough to clear the
 // host's "Insufficient funds" boundary check.
 export const SEND_MAX_SAFETY_BUFFER_SATS: number = 1000;
+export const UTXO_SEND_TRANSACTION_BYTES: number = 1000;
 
 // Fees
 export const ARRR_FEE: number = 0.0001;

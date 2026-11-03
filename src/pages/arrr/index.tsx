@@ -1,3 +1,4 @@
+import { useSendAmount } from '../../hooks/useSendAmount';
 import WalletContext from '../../contexts/walletContext';
 import { copyToClipboard, timeoutDelay } from '../../common/functions';
 import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
@@ -74,6 +75,11 @@ import {
 import { calculateMaxSendable } from '../../utils/maxSendable';
 import { useArrrAddressValidation } from '../../hooks/useArrrAddressValidation';
 import { walletErrorMessage } from '../../utils/walletErrorMessage';
+import {
+  ARRR_TRANSACTION_RETRY_DELAY_MS,
+  hasUnresolvedArrrRecipients,
+  requestArrrTransactionsWithRetry,
+} from '../../utils/arrrTransactionRetry';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -179,7 +185,6 @@ export default function PirateWallet() {
   const [openArrrLightwallet, setOpenArrrLightwallet] = useState(false);
   const [openArrrServerChange, setOpenArrrServerChange] = useState(false);
   const [openArrrSend, setOpenArrrSend] = useState(false);
-  const [arrrAmount, setArrrAmount] = useState<number>(0);
   const [arrrRecipient, setArrrRecipient] = useState(EMPTY_STRING);
   const [arrrRecipientDisplayName, setArrrRecipientDisplayName] =
     useState(EMPTY_STRING);
@@ -207,6 +212,11 @@ export default function PirateWallet() {
       ARRR_FEE,
       SEND_MAX_SAFETY_BUFFER_SATS
     );
+  const {
+    amount: arrrAmount,
+    setAmount: setArrrAmount,
+    sendMax: handleSendMaxArrr,
+  } = useSendAmount(maxSendableArrrCoin());
 
   const arrrSendLabelSx = {
     color: 'rgba(228,238,248,0.9)',
@@ -343,14 +353,6 @@ export default function PirateWallet() {
   ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
-  };
-
-  const handleSendMaxArrr = () => {
-    if (maxSendableArrrCoin() <= 0) {
-      setArrrAmount(0);
-    } else {
-      setArrrAmount(maxSendableArrrCoin());
-    }
   };
 
   const handleCloseSendArrrSuccess = (
@@ -512,23 +514,44 @@ export default function PirateWallet() {
   const getTransactionsArrr = async () => {
     try {
       setIsLoadingArrrTransactions(true);
-      const response = await qortalRequestWithTimeout(
-        {
-          action: 'GET_USER_WALLET_TRANSACTIONS',
-          coin: Coin.ARRR,
-        },
-        TIME_MINUTES_5
-      );
-      if (!response?.error) {
-        const compareFn = (
-          a: { timestamp: number },
-          b: { timestamp: number }
-        ) => {
-          return b.timestamp - a.timestamp;
-        };
-        const sortedArrrTransactions = response.sort(compareFn);
-        setTransactionsArrr(sortedArrrTransactions);
-        setIsLoadingArrrTransactions(false);
+      const requestTransactions = () =>
+        qortalRequestWithTimeout(
+          {
+            action: 'GET_USER_WALLET_TRANSACTIONS',
+            coin: Coin.ARRR,
+          },
+          TIME_MINUTES_5
+        );
+      const response =
+        await requestArrrTransactionsWithRetry(requestTransactions);
+      const compareFn = (
+        a: { timestamp: number },
+        b: { timestamp: number }
+      ) => {
+        return b.timestamp - a.timestamp;
+      };
+      const sortedArrrTransactions = response.sort(compareFn);
+      setTransactionsArrr(sortedArrrTransactions);
+      setIsLoadingArrrTransactions(false);
+
+      if (hasUnresolvedArrrRecipients(response)) {
+        // Render the usable history immediately. Native Core has already
+        // cached every exact recipient it recovered, so this quiet follow-up
+        // only spends time on txids that missed the first bounded pass.
+        void (async () => {
+          await timeoutDelay(ARRR_TRANSACTION_RETRY_DELAY_MS);
+          try {
+            const enrichedResponse = await requestTransactions();
+            if (!enrichedResponse?.error && Array.isArray(enrichedResponse)) {
+              setTransactionsArrr(enrichedResponse.sort(compareFn));
+            }
+          } catch (error) {
+            console.info(
+              'ARRR recipient enrichment will continue on the next refresh',
+              error
+            );
+          }
+        })();
       }
     } catch (error) {
       setIsLoadingArrrTransactions(false);

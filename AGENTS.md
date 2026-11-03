@@ -3,6 +3,16 @@
 Notes for AI agents working in this repository. Human-facing product docs live in
 [README.md](README.md); user-visible changes go in [CHANGELOG.md](CHANGELOG.md).
 
+## Repository location
+
+The canonical checkout is `/home/crowetic/git-repos/crowetic/Q-Wallets`.
+The legacy `/home/crowetic/git-repos/main-Q-Apps/Q-Wallets` path is a symlink to
+this checkout. Make changes here instead of creating a second copy.
+
+The owner's convention is to keep primary GitHub repositories under
+`/home/crowetic/git-repos/crowetic/<project>` and primary Gitea repositories
+under `/home/crowetic/git-repos/gitea/`, using their established namespace.
+
 ## What this app is
 
 Q-Wallets is a **Qortal Q-App**: a React SPA that is published to QDN and rendered

@@ -1,3 +1,5 @@
+import { calculateSendFee } from '../../utils/sendFee';
+import { useSendAmount } from '../../hooks/useSendAmount';
 import {
   ChangeEvent,
   MouseEvent,
@@ -26,10 +28,10 @@ import {
 import coinLogoRVN from '../../assets/rvn.png';
 import { useTranslation } from 'react-i18next';
 import {
-  DECIMAL_ROUND_UP,
   EMPTY_STRING,
   RVN_FEE,
   SEND_MAX_SAFETY_BUFFER_SATS,
+  UTXO_SEND_TRANSACTION_BYTES,
   TIME_MINUTES_3,
   TIME_MINUTES_5,
   TIME_SECONDS_2,
@@ -169,12 +171,11 @@ export default function RavencoinWallet() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [copyRvnTxHash, setCopyRvnTxHash] = useState(EMPTY_STRING);
   const [openRvnSend, setOpenRvnSend] = useState(false);
-  const [rvnAmount, setRvnAmount] = useState<number>(0);
   const [rvnRecipient, setRvnRecipient] = useState(EMPTY_STRING);
   const [rvnRecipientDisplayName, setRvnRecipientDisplayName] =
     useState(EMPTY_STRING);
   const [addressFormatError, setAddressFormatError] = useState(false);
-  const [rvnFee, setRvnFee] = useState<number>(0);
+  const [rvnFee, setRvnFee] = useState<number>(RVN_FEE);
   const [_walletInfoError, setWalletInfoError] = useState<string | null>(null);
   const [walletBalanceError, setWalletBalanceError] = useState<string | null>(
     null
@@ -186,8 +187,13 @@ export default function RavencoinWallet() {
   const [openRvnAddressBook, setOpenRvnAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
 
-  // Estimated fee in whole coins (fee rate applied to a ~1000-byte tx).
-  const estimatedRvnFee = (rvnFee * 1000) / 1e8;
+  const sendFee = calculateSendFee(
+    rvnFee,
+    UTXO_SEND_TRANSACTION_BYTES,
+    'per-byte'
+  );
+  const rvnFeeCalculated = sendFee?.feePerByte ?? 0;
+  const estimatedRvnFee = sendFee?.estimatedFee ?? NaN;
 
   // Safely-spendable max: integer-satoshi math plus a small safety buffer so
   // the prefilled amount never lands on/above the host's spendable cutoff.
@@ -197,6 +203,11 @@ export default function RavencoinWallet() {
       estimatedRvnFee,
       SEND_MAX_SAFETY_BUFFER_SATS
     );
+  const {
+    amount: rvnAmount,
+    setAmount: setRvnAmount,
+    sendMax: handleSendMaxRvn,
+  } = useSendAmount(maxSendableRvnCoin());
 
   const handleOpenAddressBook = () => {
     setOpenRvnAddressBook(true);
@@ -255,7 +266,7 @@ export default function RavencoinWallet() {
 
   const handleCloseRvnSend = () => {
     setRvnAmount(0);
-    setRvnFee(0);
+    setRvnFee(RVN_FEE);
     setRvnRecipientDisplayName(EMPTY_STRING);
     setOpenRvnSend(false);
     setAddressFormatError(false);
@@ -295,7 +306,6 @@ export default function RavencoinWallet() {
 
   const handleChangeRvnFee = (_: Event, newValue: number | number[]) => {
     setRvnFee(newValue as number);
-    setRvnAmount(0);
   };
 
   const handleCloseSendRvnSuccess = (
@@ -423,14 +433,6 @@ export default function RavencoinWallet() {
     setLoadingRefreshRvn(false);
   };
 
-  const handleSendMaxRvn = () => {
-    if (maxSendableRvnCoin() <= 0) {
-      setRvnAmount(0);
-    } else {
-      setRvnAmount(maxSendableRvnCoin());
-    }
-  };
-
   const sendRvnRequest = async () => {
     // Conservative revalidation: never submit more than the safely-spendable
     // max, even if state changed (e.g. balance refresh) after input.
@@ -439,7 +441,6 @@ export default function RavencoinWallet() {
       return;
     }
     setOpenTxRvnSubmit(true);
-    const rvnFeeCalculated = Number(rvnFee / 1e8).toFixed(DECIMAL_ROUND_UP);
     try {
       const sendRequest = await qortalRequest({
         action: 'SEND_COIN',

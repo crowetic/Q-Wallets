@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react';
 import { useRecommendedFees } from '../hooks/useRecommendedFees';
 import type { FeeType } from '../hooks/useRecommendedFees';
 import { useTranslation } from 'react-i18next';
+import { calculateSendFee } from '../utils/sendFee';
 
 type FeeManagerProps = {
   coin: string;
@@ -32,13 +33,18 @@ export const FeeManager = ({ coin, onChange }: FeeManagerProps) => {
   const {
     selectedFeePublisher,
     setSelectedFeePublisher,
-    currentFee,
+    currentFee: recommendedFee,
     selectFeeType,
     setSelectFeeType,
     data,
     customFee,
     setCustomFee,
   } = useRecommendedFees({ selectedCoin: coin });
+
+  const currentFee =
+    recommendedFee === null
+      ? null
+      : (calculateSendFee(recommendedFee, 1000)?.ratePerKb ?? 0);
 
   const handleFeeTypeChange = (
     _event: MouseEvent<HTMLElement>,
@@ -177,10 +183,9 @@ export const FeeManager = ({ coin, onChange }: FeeManagerProps) => {
           onClick={() => setAdvancedOpen((current) => !current)}
           sx={{
             bgcolor: advancedOpen ? 'rgba(24,189,242,0.08)' : 'transparent',
-            borderColor:
-              advancedOpen
-                ? 'rgba(24,189,242,0.54)'
-                : 'rgba(116,158,180,0.2)',
+            borderColor: advancedOpen
+              ? 'rgba(24,189,242,0.54)'
+              : 'rgba(116,158,180,0.2)',
             borderRadius: 1.2,
             color: advancedOpen ? 'primary.main' : 'text.primary',
             fontSize: 12,

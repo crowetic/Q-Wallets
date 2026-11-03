@@ -1,3 +1,5 @@
+import { calculateSendFee } from '../../utils/sendFee';
+import { useSendAmount } from '../../hooks/useSendAmount';
 import {
   ChangeEvent,
   MouseEvent,
@@ -26,7 +28,6 @@ import {
 import coinLogoLTC from '../../assets/ltc.png';
 import { useTranslation } from 'react-i18next';
 import {
-  DECIMAL_ROUND_UP,
   EMPTY_STRING,
   LTC_FEE,
   SEND_MAX_SAFETY_BUFFER_SATS,
@@ -151,7 +152,6 @@ export default function LitecoinWallet() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [copyLtcTxHash, setCopyLtcTxHash] = useState(EMPTY_STRING);
   const [openLtcSend, setOpenLtcSend] = useState(false);
-  const [ltcAmount, setLtcAmount] = useState<number>(0);
   const [ltcRecipient, setLtcRecipient] = useState(EMPTY_STRING);
   const [ltcRecipientDisplayName, setLtcRecipientDisplayName] =
     useState(EMPTY_STRING);
@@ -168,8 +168,9 @@ export default function LitecoinWallet() {
     null
   );
 
-  const ltcFeeCalculated = +(+inputFee / 1000 / 1e8).toFixed(DECIMAL_ROUND_UP);
-  const estimatedFeeCalculated = +ltcFeeCalculated * LTC_FEE;
+  const sendFee = calculateSendFee(inputFee, LTC_FEE);
+  const ltcFeeCalculated = sendFee?.feePerByte ?? 0;
+  const estimatedFeeCalculated = sendFee?.estimatedFee ?? NaN;
 
   // Safely-spendable max: integer-satoshi math plus a small safety buffer so
   // the prefilled amount never lands on/above the host's spendable cutoff.
@@ -179,6 +180,11 @@ export default function LitecoinWallet() {
       estimatedFeeCalculated,
       SEND_MAX_SAFETY_BUFFER_SATS
     );
+  const {
+    amount: ltcAmount,
+    setAmount: setLtcAmount,
+    sendMax: handleSendMaxLtc,
+  } = useSendAmount(maxSendableLtcCoin());
 
   const handleOpenAddressBook = () => {
     setOpenLtcAddressBook(true);
@@ -392,14 +398,6 @@ export default function LitecoinWallet() {
     setLoadingRefreshLtc(true);
     await getTransactionsLtc();
     setLoadingRefreshLtc(false);
-  };
-
-  const handleSendMaxLtc = () => {
-    if (maxSendableLtcCoin() <= 0) {
-      setLtcAmount(0);
-    } else {
-      setLtcAmount(maxSendableLtcCoin());
-    }
   };
 
   const sendLtcRequest = async () => {
