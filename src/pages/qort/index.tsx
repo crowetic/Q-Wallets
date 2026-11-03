@@ -1,3 +1,4 @@
+import { useSendAmount } from '../../hooks/useSendAmount';
 import {
   CheckCircleOutline,
   Close,
@@ -318,7 +319,6 @@ export default function QortalWallet() {
   const [openTxQortSubmit, setOpenTxQortSubmit] = useState(false);
   const [openSendQortSuccess, setOpenSendQortSuccess] = useState(false);
   const [openSendQortError, setOpenSendQortError] = useState(false);
-  const [qortAmount, setQortAmount] = useState<number | undefined>(undefined);
   const [qortRecipient, setQortRecipient] = useState<string>(EMPTY_STRING);
   const [qortRecipientDisplayName, setQortRecipientDisplayName] =
     useState<string>(EMPTY_STRING);
@@ -354,13 +354,17 @@ export default function QortalWallet() {
   const formatQortAmount = (value: unknown) => formatDecimal(value, 2, 2);
   const formatQortFee = (value: unknown) => formatDecimal(value, 2, 4);
 
-  
   // Safely-spendable max via integer-satoshi math (avoids the floating-point
   // boundary error). QORT has a deterministic on-chain fee and an account
   // model, so no extra safety buffer is needed.
   const maxSendableQortCoin = () =>
     calculateMaxSendable(walletBalanceQort, qortTxFee);
-  
+  const {
+    amount: qortAmount,
+    setAmount: setQortAmount,
+    sendMax: handleSendMaxQort,
+  } = useSendAmount(maxSendableQortCoin());
+
   const emptyRowsPayment =
     page > 0
       ? Math.max(0, (1 + page) * rowsPerPage - paymentInfo?.length || 0)
@@ -671,14 +675,6 @@ export default function QortalWallet() {
     setOpenSendQortError(false);
   };
 
-  const handleSendMaxQort = () => {
-    if (maxSendableQortCoin() <= 0) {
-      setQortAmount(0);
-    } else {
-      setQortAmount(maxSendableQortCoin());
-    }
-  };
-
   // core validation (synchronous checks)
   const validateAmountLocal = useCallback(
     (amount?: number) => {
@@ -830,7 +826,11 @@ export default function QortalWallet() {
   ]);
 
   // input handlers
-  const onAmountChange = (values: { floatValue?: number }) => {
+  const onAmountChange = (
+    values: { floatValue?: number },
+    sourceInfo: { source: string }
+  ) => {
+    if (sourceInfo.source !== 'event') return;
     const next = values.floatValue ?? 0;
     setQortAmount(next);
     // quick local validation

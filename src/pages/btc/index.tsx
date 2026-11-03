@@ -1,3 +1,5 @@
+import { calculateSendFee } from '../../utils/sendFee';
+import { useSendAmount } from '../../hooks/useSendAmount';
 import {
   ChangeEvent,
   MouseEvent,
@@ -28,7 +30,6 @@ import { FeeManager } from '../../components/FeeManager';
 import { useTranslation } from 'react-i18next';
 import {
   BTC_FEE,
-  DECIMAL_ROUND_UP,
   EMPTY_STRING,
   SEND_MAX_SAFETY_BUFFER_SATS,
   TIME_MINUTES_3,
@@ -151,7 +152,6 @@ export default function BitcoinWallet() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [copyBtcTxHash, setCopyBtcTxHash] = useState(EMPTY_STRING);
   const [openBtcSend, setOpenBtcSend] = useState(false);
-  const [btcAmount, setBtcAmount] = useState<number>(0);
   const [btcRecipient, setBtcRecipient] = useState(EMPTY_STRING);
   const [btcRecipientDisplayName, setBtcRecipientDisplayName] =
     useState(EMPTY_STRING);
@@ -167,8 +167,9 @@ export default function BitcoinWallet() {
   const [walletBalanceError, setWalletBalanceError] = useState<string | null>(
     null
   );
-  const btcFeeCalculated = +(+inputFee / 1000 / 1e8).toFixed(DECIMAL_ROUND_UP);
-  const estimatedFeeCalculated = +btcFeeCalculated * BTC_FEE;
+  const sendFee = calculateSendFee(inputFee, BTC_FEE);
+  const btcFeeCalculated = sendFee?.feePerByte ?? 0;
+  const estimatedFeeCalculated = sendFee?.estimatedFee ?? NaN;
 
   // Safely-spendable max: integer-satoshi math plus a small safety buffer so
   // the prefilled amount never lands on/above the host's spendable cutoff.
@@ -178,6 +179,11 @@ export default function BitcoinWallet() {
       estimatedFeeCalculated,
       SEND_MAX_SAFETY_BUFFER_SATS
     );
+  const {
+    amount: btcAmount,
+    setAmount: setBtcAmount,
+    sendMax: handleSendMaxBtc,
+  } = useSendAmount(maxSendableBtcCoin());
 
   const handleOpenAddressBook = () => {
     setOpenBtcAddressBook(true);
@@ -388,14 +394,6 @@ export default function BitcoinWallet() {
     setLoadingRefreshBtc(true);
     await getTransactionsBtc();
     setLoadingRefreshBtc(false);
-  };
-
-  const handleSendMaxBtc = () => {
-    if (maxSendableBtcCoin() <= 0) {
-      setBtcAmount(0);
-    } else {
-      setBtcAmount(maxSendableBtcCoin());
-    }
   };
 
   const sendBtcRequest = async () => {

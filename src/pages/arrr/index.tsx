@@ -1,3 +1,4 @@
+import { useSendAmount } from '../../hooks/useSendAmount';
 import WalletContext from '../../contexts/walletContext';
 import { copyToClipboard, timeoutDelay } from '../../common/functions';
 import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
@@ -177,7 +178,6 @@ export default function PirateWallet() {
   const [openArrrLightwallet, setOpenArrrLightwallet] = useState(false);
   const [openArrrServerChange, setOpenArrrServerChange] = useState(false);
   const [openArrrSend, setOpenArrrSend] = useState(false);
-  const [arrrAmount, setArrrAmount] = useState<number>(0);
   const [arrrRecipient, setArrrRecipient] = useState(EMPTY_STRING);
   const [arrrRecipientDisplayName, setArrrRecipientDisplayName] =
     useState(EMPTY_STRING);
@@ -198,6 +198,12 @@ export default function PirateWallet() {
       ARRR_FEE,
       SEND_MAX_SAFETY_BUFFER_SATS
     );
+
+  const {
+    amount: arrrAmount,
+    setAmount: setArrrAmount,
+    sendMax: handleSendMaxArrr,
+  } = useSendAmount(maxSendableArrrCoin());
 
   const arrrSendLabelSx = {
     color: 'rgba(228,238,248,0.9)',
@@ -344,14 +350,6 @@ export default function PirateWallet() {
   ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
-  };
-
-  const handleSendMaxArrr = () => {
-    if (maxSendableArrrCoin() <= 0) {
-      setArrrAmount(0);
-    } else {
-      setArrrAmount(maxSendableArrrCoin());
-    }
   };
 
   const handleCloseSendArrrSuccess = (

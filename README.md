@@ -42,6 +42,7 @@ Q-Wallets is your gateway to managing multiple cryptocurrencies on the Qortal ne
 - **Custom Fees** - Set your own fee for advanced users
 - **Multiple Sources** - Fetches fee estimates from decentralized publishers
 - **Real-Time Updates** - Current network fee recommendations
+- **Send Max** - Keeps the maximum amount in step with fee and balance changes until you edit it manually. External wallets reserve an estimated network fee and a small safety margin, so a small balance may remain after sending.
 
 #### User Experience
 

@@ -1,3 +1,5 @@
+import { calculateSendFee } from '../../utils/sendFee';
+import { useSendAmount } from '../../hooks/useSendAmount';
 import {
   ChangeEvent,
   MouseEvent,
@@ -38,10 +40,10 @@ import {
 import coinLogoDGB from '../../assets/dgb.png';
 import { useTranslation } from 'react-i18next';
 import {
-  DECIMAL_ROUND_UP,
   DGB_FEE,
   EMPTY_STRING,
   SEND_MAX_SAFETY_BUFFER_SATS,
+  UTXO_SEND_TRANSACTION_BYTES,
   TIME_MINUTES_3,
   TIME_MINUTES_5,
   TIME_SECONDS_2,
@@ -174,12 +176,11 @@ export default function DigibyteWallet() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [copyDgbTxHash, setCopyDgbTxHash] = useState(EMPTY_STRING);
   const [openDgbSend, setOpenDgbSend] = useState(false);
-  const [dgbAmount, setDgbAmount] = useState<number>(0);
   const [dgbRecipient, setDgbRecipient] = useState(EMPTY_STRING);
   const [dgbRecipientDisplayName, setDgbRecipientDisplayName] =
     useState(EMPTY_STRING);
   const [addressFormatError, setAddressFormatError] = useState(false);
-  const [dgbFee, setDgbFee] = useState<number>(0);
+  const [dgbFee, setDgbFee] = useState<number>(DGB_FEE);
   const [loadingRefreshDgb, setLoadingRefreshDgb] = useState(false);
   const [openTxDgbSubmit, setOpenTxDgbSubmit] = useState(false);
   const [openSendDgbSuccess, setOpenSendDgbSuccess] = useState(false);
@@ -187,8 +188,13 @@ export default function DigibyteWallet() {
   const [openDgbAddressBook, setOpenDgbAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
 
-  // Estimated fee in whole coins (fee rate applied to a ~1000-byte tx).
-  const estimatedDgbFee = (dgbFee * 1000) / 1e8;
+  const sendFee = calculateSendFee(
+    dgbFee,
+    UTXO_SEND_TRANSACTION_BYTES,
+    'per-byte'
+  );
+  const dgbFeeCalculated = sendFee?.feePerByte ?? 0;
+  const estimatedDgbFee = sendFee?.estimatedFee ?? NaN;
 
   // Safely-spendable max: integer-satoshi math plus a small safety buffer so
   // the prefilled amount never lands on/above the host's spendable cutoff.
@@ -198,6 +204,11 @@ export default function DigibyteWallet() {
       estimatedDgbFee,
       SEND_MAX_SAFETY_BUFFER_SATS
     );
+  const {
+    amount: dgbAmount,
+    setAmount: setDgbAmount,
+    sendMax: handleSendMaxDgb,
+  } = useSendAmount(maxSendableDbgCoin());
 
   const handleOpenAddressBook = () => {
     setOpenDgbAddressBook(true);
@@ -250,7 +261,7 @@ export default function DigibyteWallet() {
 
   const handleCloseDgbSend = () => {
     setDgbAmount(0);
-    setDgbFee(0);
+    setDgbFee(DGB_FEE);
     setDgbRecipientDisplayName(EMPTY_STRING);
     setOpenDgbSend(false);
     setAddressFormatError(false);
@@ -286,7 +297,6 @@ export default function DigibyteWallet() {
 
   const handleChangeDgbFee = (_: Event, newValue: number | number[]) => {
     setDgbFee(newValue as number);
-    setDgbAmount(0);
   };
 
   const handleCloseSendDgbSuccess = (
@@ -414,14 +424,6 @@ export default function DigibyteWallet() {
     setLoadingRefreshDgb(false);
   };
 
-  const handleSendMaxDgb = () => {
-    if (maxSendableDbgCoin() <= 0) {
-      setDgbAmount(0);
-    } else {
-      setDgbAmount(maxSendableDbgCoin());
-    }
-  };
-
   const sendDgbRequest = async () => {
     // Conservative revalidation: never submit more than the safely-spendable
     // max, even if state changed (e.g. balance refresh) after input.
@@ -430,7 +432,6 @@ export default function DigibyteWallet() {
       return;
     }
     setOpenTxDgbSubmit(true);
-    const dgbFeeCalculated = Number(dgbFee / 1e8).toFixed(DECIMAL_ROUND_UP);
     try {
       const sendRequest = await qortalRequest({
         action: 'SEND_COIN',

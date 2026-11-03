@@ -607,8 +607,10 @@ export function ExternalSendForm({
               const { formattedValue, floatValue } = values;
               return formattedValue === '' || (floatValue ?? 0) <= safeMax;
             }}
-            onValueChange={(values) => {
-              onAmountChange(values.floatValue ?? 0);
+            onValueChange={(values, sourceInfo) => {
+              if (sourceInfo.source === 'event') {
+                onAmountChange(values.floatValue ?? 0);
+              }
             }}
             required
             slotProps={{

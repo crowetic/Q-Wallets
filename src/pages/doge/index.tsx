@@ -1,3 +1,5 @@
+import { calculateSendFee } from '../../utils/sendFee';
+import { useSendAmount } from '../../hooks/useSendAmount';
 import {
   ChangeEvent,
   MouseEvent,
@@ -37,7 +39,6 @@ import {
 import coinLogoDOGE from '../../assets/doge.png';
 import { useTranslation } from 'react-i18next';
 import {
-  DECIMAL_ROUND_UP,
   DOGE_FEE,
   EMPTY_STRING,
   SEND_MAX_SAFETY_BUFFER_SATS,
@@ -151,7 +152,6 @@ export default function DogecoinWallet() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [copyDogeTxHash, setCopyDogeTxHash] = useState(EMPTY_STRING);
   const [openDogeSend, setOpenDogeSend] = useState(false);
-  const [dogeAmount, setDogeAmount] = useState<number>(0);
   const [dogeRecipient, setDogeRecipient] = useState(EMPTY_STRING);
   const [dogeRecipientDisplayName, setDogeRecipientDisplayName] =
     useState(EMPTY_STRING);
@@ -169,8 +169,9 @@ export default function DogecoinWallet() {
     null
   );
 
-  const dogeFeeCalculated = +(+inputFee / 1000 / 1e8).toFixed(DECIMAL_ROUND_UP);
-  const estimatedFeeCalculated = +dogeFeeCalculated * DOGE_FEE;
+  const sendFee = calculateSendFee(inputFee, DOGE_FEE);
+  const dogeFeeCalculated = sendFee?.feePerByte ?? 0;
+  const estimatedFeeCalculated = sendFee?.estimatedFee ?? NaN;
 
   // Safely-spendable max: integer-satoshi math plus a small safety buffer so
   // the prefilled amount never lands on/above the host's spendable cutoff.
@@ -180,6 +181,11 @@ export default function DogecoinWallet() {
       estimatedFeeCalculated,
       SEND_MAX_SAFETY_BUFFER_SATS
     );
+  const {
+    amount: dogeAmount,
+    setAmount: setDogeAmount,
+    sendMax: handleSendMaxDoge,
+  } = useSendAmount(maxSendableDogeCoin());
 
   const handleOpenAddressBook = () => {
     setOpenDogeAddressBook(true);
@@ -387,14 +393,6 @@ export default function DogecoinWallet() {
     setLoadingRefreshDoge(true);
     await getTransactionsDoge();
     setLoadingRefreshDoge(false);
-  };
-
-  const handleSendMaxDoge = () => {
-    if (maxSendableDogeCoin() <= 0) {
-      setDogeAmount(0);
-    } else {
-      setDogeAmount(maxSendableDogeCoin());
-    }
   };
 
   const sendDogeRequest = async () => {

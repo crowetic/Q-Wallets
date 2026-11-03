@@ -2,6 +2,20 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.3.6] - 2026-11-02
+
+### Fixed
+
+- Send Max now follows changes to the selected fee and wallet balance until the amount is edited manually, across all seven wallets.
+- BTC, LTC and DOGE fee estimates and submissions use the same supported whole-satoshi-per-byte rate, including low and custom publisher rates. Send Max waits for a valid fee instead of reserving zero while fees load.
+- DGB and RVN keep their default fee when opening a send dialog from the Address Book and reserve the selected slider fee consistently.
+- DGB and RVN fee slider changes preserve the amount selection, allowing Max to recalculate and keeping manually entered amounts intact.
+
+### Tests
+
+- Added coverage for fee units, low and custom rates, Send Max updates and manual amount overrides.
+- Added wallet-level checks for amount and fee submission across all seven wallets, balance refreshes and send-dialog resets.
+
 ## [1.3.5] - 2026-08-09
 
 ### Fixed
