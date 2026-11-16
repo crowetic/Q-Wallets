@@ -1,3 +1,5 @@
+import { walletErrorMessage } from '../../utils/walletErrorMessage';
+import { requireSendCoinTransactionId } from '../../utils/sendCoinResult';
 import { calculateSendFee } from '../../utils/sendFee';
 import { useSendAmount } from '../../hooks/useSendAmount';
 import {
@@ -185,6 +187,7 @@ export default function DigibyteWallet() {
   const [openTxDgbSubmit, setOpenTxDgbSubmit] = useState(false);
   const [openSendDgbSuccess, setOpenSendDgbSuccess] = useState(false);
   const [openSendDgbError, setOpenSendDgbError] = useState(false);
+  const [sendDgbError, setSendDgbError] = useState(EMPTY_STRING);
   const [openDgbAddressBook, setOpenDgbAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
 
@@ -425,9 +428,29 @@ export default function DigibyteWallet() {
   };
 
   const sendDgbRequest = async () => {
-    // Conservative revalidation: never submit more than the safely-spendable
-    // max, even if state changed (e.g. balance refresh) after input.
-    if (dgbAmount <= 0 || dgbAmount > maxSendableDbgCoin()) {
+    setSendDgbError(EMPTY_STRING);
+    setOpenSendDgbError(false);
+    setOpenSendDgbSuccess(false);
+    if (!Number.isFinite(dgbAmount) || dgbAmount <= 0) {
+      setSendDgbError(t('core:message.error.amount_positive'));
+      setOpenSendDgbError(true);
+      return;
+    }
+    if (dgbAmount > maxSendableDbgCoin()) {
+      setSendDgbError(
+        t('core:message.error.amount_exceeds_balance', {
+          maxAmount: maxSendableDbgCoin(),
+        })
+      );
+      setOpenSendDgbError(true);
+      return;
+    }
+    if (!dgbFeeCalculated) {
+      setSendDgbError(
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
       setOpenSendDgbError(true);
       return;
     }
@@ -440,28 +463,32 @@ export default function DigibyteWallet() {
         amount: dgbAmount,
         fee: dgbFeeCalculated,
       });
-      if (!sendRequest?.error) {
-        setDgbAmount(0);
-        setDgbRecipient(EMPTY_STRING);
-        setDgbRecipientDisplayName(EMPTY_STRING);
-        setDgbFee(DGB_FEE);
-        setOpenTxDgbSubmit(false);
-        setOpenSendDgbSuccess(true);
-        setIsLoadingWalletBalanceDgb(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        await getTransactionsDgb();
-      }
-    } catch (error) {
+      requireSendCoinTransactionId(
+        sendRequest,
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
       setDgbAmount(0);
       setDgbRecipient(EMPTY_STRING);
       setDgbRecipientDisplayName(EMPTY_STRING);
       setDgbFee(DGB_FEE);
-      setOpenTxDgbSubmit(false);
-      setOpenSendDgbError(true);
+      setOpenSendDgbSuccess(true);
       setIsLoadingWalletBalanceDgb(true);
       await timeoutDelay(TIME_SECONDS_3);
-      getTransactionsDgb();
-      console.error('ERROR SENDING DGB', error);
+      await getTransactionsDgb();
+    } catch (error) {
+      const message = walletErrorMessage(
+        error,
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
+      setSendDgbError(message);
+      setOpenSendDgbError(true);
+      console.error('ERROR SENDING DGB', message);
+    } finally {
+      setOpenTxDgbSubmit(false);
     }
   };
 
@@ -607,20 +634,17 @@ export default function DigibyteWallet() {
             })}
           </Alert>
         </Snackbar>
-        <Snackbar
-          open={openSendDgbError}
-          autoHideDuration={TIME_SECONDS_4}
-          onClose={handleCloseSendDgbError}
-        >
+        <Snackbar open={openSendDgbError} onClose={handleCloseSendDgbError}>
           <Alert
             onClose={handleCloseSendDgbError}
             severity="error"
             variant="filled"
             sx={{ width: '100%' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendDgbError ||
+              t('core:message.error.something_went_wrong', {
+                postProcess: 'capitalizeFirstChar',
+              })}
           </Alert>
         </Snackbar>
         <ExternalSendForm

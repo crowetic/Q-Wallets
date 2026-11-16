@@ -1,3 +1,5 @@
+import { walletErrorMessage } from '../../utils/walletErrorMessage';
+import { requireSendCoinTransactionId } from '../../utils/sendCoinResult';
 import { calculateSendFee } from '../../utils/sendFee';
 import { useSendAmount } from '../../hooks/useSendAmount';
 import {
@@ -160,6 +162,7 @@ export default function BitcoinWallet() {
   const [openTxBtcSubmit, setOpenTxBtcSubmit] = useState(false);
   const [openSendBtcSuccess, setOpenSendBtcSuccess] = useState(false);
   const [openSendBtcError, setOpenSendBtcError] = useState(false);
+  const [sendBtcError, setSendBtcError] = useState(EMPTY_STRING);
   const [openBtcAddressBook, setOpenBtcAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
   const [inputFee, setInputFee] = useState(0);
@@ -397,10 +400,29 @@ export default function BitcoinWallet() {
   };
 
   const sendBtcRequest = async () => {
-    if (!btcFeeCalculated) return;
-    // Conservative revalidation: never submit more than the safely-spendable
-    // max, even if state changed (e.g. balance refresh) after input.
-    if (btcAmount <= 0 || btcAmount > maxSendableBtcCoin()) {
+    setSendBtcError(EMPTY_STRING);
+    setOpenSendBtcError(false);
+    setOpenSendBtcSuccess(false);
+    if (!Number.isFinite(btcAmount) || btcAmount <= 0) {
+      setSendBtcError(t('core:message.error.amount_positive'));
+      setOpenSendBtcError(true);
+      return;
+    }
+    if (btcAmount > maxSendableBtcCoin()) {
+      setSendBtcError(
+        t('core:message.error.amount_exceeds_balance', {
+          maxAmount: maxSendableBtcCoin(),
+        })
+      );
+      setOpenSendBtcError(true);
+      return;
+    }
+    if (!btcFeeCalculated) {
+      setSendBtcError(
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
       setOpenSendBtcError(true);
       return;
     }
@@ -413,26 +435,31 @@ export default function BitcoinWallet() {
         amount: btcAmount,
         fee: btcFeeCalculated,
       });
-      if (!sendRequest?.error) {
-        setBtcAmount(0);
-        setBtcRecipient(EMPTY_STRING);
-        setBtcRecipientDisplayName(EMPTY_STRING);
-        setOpenTxBtcSubmit(false);
-        setOpenSendBtcSuccess(true);
-        setIsLoadingWalletBalanceBtc(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        await getTransactionsBtc();
-      }
-    } catch (error) {
+      requireSendCoinTransactionId(
+        sendRequest,
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
       setBtcAmount(0);
       setBtcRecipient(EMPTY_STRING);
       setBtcRecipientDisplayName(EMPTY_STRING);
-      setOpenTxBtcSubmit(false);
-      setOpenSendBtcError(true);
+      setOpenSendBtcSuccess(true);
       setIsLoadingWalletBalanceBtc(true);
       await timeoutDelay(TIME_SECONDS_3);
-      getTransactionsBtc();
-      console.error('ERROR SENDING BTC', error);
+      await getTransactionsBtc();
+    } catch (error) {
+      const message = walletErrorMessage(
+        error,
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
+      setSendBtcError(message);
+      setOpenSendBtcError(true);
+      console.error('ERROR SENDING BTC', message);
+    } finally {
+      setOpenTxBtcSubmit(false);
     }
   };
 
@@ -578,20 +605,17 @@ export default function BitcoinWallet() {
             })}
           </Alert>
         </Snackbar>
-        <Snackbar
-          open={openSendBtcError}
-          autoHideDuration={TIME_SECONDS_4}
-          onClose={handleCloseSendBtcError}
-        >
+        <Snackbar open={openSendBtcError} onClose={handleCloseSendBtcError}>
           <Alert
             onClose={handleCloseSendBtcError}
             severity="error"
             variant="filled"
             sx={{ width: '100%' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendBtcError ||
+              t('core:message.error.something_went_wrong', {
+                postProcess: 'capitalizeFirstChar',
+              })}
           </Alert>
         </Snackbar>
         <ExternalSendForm

@@ -38,4 +38,13 @@ describe('wallet host error messages', () => {
     expect(message).not.toContain('secret-key');
     expect(message).not.toContain('test-entropy');
   });
+  it('redacts extended wallet keys from labels and free text', () => {
+    const key = `xprv${'a'.repeat(100)}`;
+    const message = walletErrorMessage(
+      `Bad key ${key}; xprv58=private-root`,
+      'fallback'
+    );
+    expect(message).not.toContain(key);
+    expect(message).not.toContain('private-root');
+  });
 });

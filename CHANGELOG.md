@@ -2,6 +2,18 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.3.11] - 2026-11-16
+
+### Fixed
+
+- Show the wallet host's send error for BTC, LTC, DOGE, DGB and RVN, and keep it visible until dismissed. Preserve the recipient, amount and fee after a failed send so the payment can be reviewed.
+- Treat returned error objects and missing or malformed transaction IDs as failures instead of reporting success. Close the submitting dialog consistently; payment submission is never retried automatically.
+- Redact extended private keys from displayed wallet errors.
+
+### Tests
+
+- Cover rejected and returned host errors across all five wallets, retained payment drafts, malformed send acknowledgements, transaction ID formats and error redaction.
+
 ## [1.3.10] - 2026-11-03
 
 ### Fixed

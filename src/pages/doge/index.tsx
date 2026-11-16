@@ -1,3 +1,5 @@
+import { walletErrorMessage } from '../../utils/walletErrorMessage';
+import { requireSendCoinTransactionId } from '../../utils/sendCoinResult';
 import { calculateSendFee } from '../../utils/sendFee';
 import { useSendAmount } from '../../hooks/useSendAmount';
 import {
@@ -160,6 +162,7 @@ export default function DogecoinWallet() {
   const [openTxDogeSubmit, setOpenTxDogeSubmit] = useState(false);
   const [openSendDogeSuccess, setOpenSendDogeSuccess] = useState(false);
   const [openSendDogeError, setOpenSendDogeError] = useState(false);
+  const [sendDogeError, setSendDogeError] = useState(EMPTY_STRING);
   const [openDogeAddressBook, setOpenDogeAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
 
@@ -396,14 +399,32 @@ export default function DogecoinWallet() {
   };
 
   const sendDogeRequest = async () => {
-    if (!dogeFeeCalculated) return;
-    // Conservative revalidation: never submit more than the safely-spendable
-    // max, even if state changed (e.g. balance refresh) after input.
-    if (dogeAmount <= 0 || dogeAmount > maxSendableDogeCoin()) {
+    setSendDogeError(EMPTY_STRING);
+    setOpenSendDogeError(false);
+    setOpenSendDogeSuccess(false);
+    if (!Number.isFinite(dogeAmount) || dogeAmount <= 0) {
+      setSendDogeError(t('core:message.error.amount_positive'));
       setOpenSendDogeError(true);
       return;
     }
-
+    if (dogeAmount > maxSendableDogeCoin()) {
+      setSendDogeError(
+        t('core:message.error.amount_exceeds_balance', {
+          maxAmount: maxSendableDogeCoin(),
+        })
+      );
+      setOpenSendDogeError(true);
+      return;
+    }
+    if (!dogeFeeCalculated) {
+      setSendDogeError(
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
+      setOpenSendDogeError(true);
+      return;
+    }
     setOpenTxDogeSubmit(true);
     try {
       const sendRequest = await qortalRequest({
@@ -413,26 +434,31 @@ export default function DogecoinWallet() {
         amount: dogeAmount,
         fee: dogeFeeCalculated,
       });
-      if (!sendRequest?.error) {
-        setDogeAmount(0);
-        setDogeRecipient(EMPTY_STRING);
-        setDogeRecipientDisplayName(EMPTY_STRING);
-        setOpenTxDogeSubmit(false);
-        setOpenSendDogeSuccess(true);
-        setIsLoadingWalletBalanceDoge(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        await getTransactionsDoge();
-      }
-    } catch (error) {
+      requireSendCoinTransactionId(
+        sendRequest,
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
       setDogeAmount(0);
       setDogeRecipient(EMPTY_STRING);
       setDogeRecipientDisplayName(EMPTY_STRING);
-      setOpenTxDogeSubmit(false);
-      setOpenSendDogeError(true);
+      setOpenSendDogeSuccess(true);
       setIsLoadingWalletBalanceDoge(true);
       await timeoutDelay(TIME_SECONDS_3);
       await getTransactionsDoge();
-      console.error('ERROR SENDING DOGE', error);
+    } catch (error) {
+      const message = walletErrorMessage(
+        error,
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
+      setSendDogeError(message);
+      setOpenSendDogeError(true);
+      console.error('ERROR SENDING DOGE', message);
+    } finally {
+      setOpenTxDogeSubmit(false);
     }
   };
 
@@ -578,20 +604,17 @@ export default function DogecoinWallet() {
             })}
           </Alert>
         </Snackbar>
-        <Snackbar
-          open={openSendDogeError}
-          autoHideDuration={TIME_SECONDS_4}
-          onClose={handleCloseSendDogeError}
-        >
+        <Snackbar open={openSendDogeError} onClose={handleCloseSendDogeError}>
           <Alert
             onClose={handleCloseSendDogeError}
             severity="error"
             variant="filled"
             sx={{ width: '100%' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendDogeError ||
+              t('core:message.error.something_went_wrong', {
+                postProcess: 'capitalizeFirstChar',
+              })}
           </Alert>
         </Snackbar>
         <ExternalSendForm

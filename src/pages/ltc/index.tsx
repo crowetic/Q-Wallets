@@ -1,3 +1,5 @@
+import { walletErrorMessage } from '../../utils/walletErrorMessage';
+import { requireSendCoinTransactionId } from '../../utils/sendCoinResult';
 import { calculateSendFee } from '../../utils/sendFee';
 import { useSendAmount } from '../../hooks/useSendAmount';
 import {
@@ -160,6 +162,7 @@ export default function LitecoinWallet() {
   const [openTxLtcSubmit, setOpenTxLtcSubmit] = useState(false);
   const [openSendLtcSuccess, setOpenSendLtcSuccess] = useState(false);
   const [openSendLtcError, setOpenSendLtcError] = useState(false);
+  const [sendLtcError, setSendLtcError] = useState(EMPTY_STRING);
   const [openLtcAddressBook, setOpenLtcAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
   const [inputFee, setInputFee] = useState(0);
@@ -401,15 +404,33 @@ export default function LitecoinWallet() {
   };
 
   const sendLtcRequest = async () => {
-    if (!ltcFeeCalculated) return;
-    // Conservative revalidation: never submit more than the safely-spendable
-    // max, even if state changed (e.g. balance refresh) after input.
-    if (ltcAmount <= 0 || ltcAmount > maxSendableLtcCoin()) {
+    setSendLtcError(EMPTY_STRING);
+    setOpenSendLtcError(false);
+    setOpenSendLtcSuccess(false);
+    if (!Number.isFinite(ltcAmount) || ltcAmount <= 0) {
+      setSendLtcError(t('core:message.error.amount_positive'));
+      setOpenSendLtcError(true);
+      return;
+    }
+    if (ltcAmount > maxSendableLtcCoin()) {
+      setSendLtcError(
+        t('core:message.error.amount_exceeds_balance', {
+          maxAmount: maxSendableLtcCoin(),
+        })
+      );
+      setOpenSendLtcError(true);
+      return;
+    }
+    if (!ltcFeeCalculated) {
+      setSendLtcError(
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
       setOpenSendLtcError(true);
       return;
     }
     setOpenTxLtcSubmit(true);
-
     try {
       const sendRequest = await qortalRequest({
         action: 'SEND_COIN',
@@ -418,26 +439,31 @@ export default function LitecoinWallet() {
         amount: ltcAmount,
         fee: ltcFeeCalculated,
       });
-      if (!sendRequest?.error) {
-        setLtcAmount(0);
-        setLtcRecipient(EMPTY_STRING);
-        setLtcRecipientDisplayName(EMPTY_STRING);
-        setOpenTxLtcSubmit(false);
-        setOpenSendLtcSuccess(true);
-        setIsLoadingWalletBalanceLtc(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        await getTransactionsLtc();
-      }
-    } catch (error) {
+      requireSendCoinTransactionId(
+        sendRequest,
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
       setLtcAmount(0);
       setLtcRecipient(EMPTY_STRING);
       setLtcRecipientDisplayName(EMPTY_STRING);
-      setOpenTxLtcSubmit(false);
-      setOpenSendLtcError(true);
+      setOpenSendLtcSuccess(true);
       setIsLoadingWalletBalanceLtc(true);
       await timeoutDelay(TIME_SECONDS_3);
       await getTransactionsLtc();
-      console.error('ERROR SENDING LTC', error);
+    } catch (error) {
+      const message = walletErrorMessage(
+        error,
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
+      setSendLtcError(message);
+      setOpenSendLtcError(true);
+      console.error('ERROR SENDING LTC', message);
+    } finally {
+      setOpenTxLtcSubmit(false);
     }
   };
 
@@ -583,20 +609,17 @@ export default function LitecoinWallet() {
             })}
           </Alert>
         </Snackbar>
-        <Snackbar
-          open={openSendLtcError}
-          autoHideDuration={TIME_SECONDS_4}
-          onClose={handleCloseSendLtcError}
-        >
+        <Snackbar open={openSendLtcError} onClose={handleCloseSendLtcError}>
           <Alert
             onClose={handleCloseSendLtcError}
             severity="error"
             variant="filled"
             sx={{ width: '100%' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendLtcError ||
+              t('core:message.error.something_went_wrong', {
+                postProcess: 'capitalizeFirstChar',
+              })}
           </Alert>
         </Snackbar>
         <ExternalSendForm

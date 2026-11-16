@@ -17,8 +17,9 @@ export const walletErrorMessage = (
   return message
     .trim()
     .replace(
-      /(["']?(?:entropy58|arrrSeed58|seedPhrase|privateKey|apiKey|foreignKey)["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s&,}]+)/gi,
+      /(["']?(?:entropy58|arrrSeed58|seedPhrase|privateKey|apiKey|foreignKey|xprv58|xprv)["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s&,}]+)/gi,
       '$1…'
     )
+    .replace(/\b(?:xprv|tprv|dgpv)[1-9A-HJ-NP-Za-km-z]{60,}\b/g, '…')
     .slice(0, 1000);
 };

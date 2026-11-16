@@ -1,3 +1,5 @@
+import { walletErrorMessage } from '../../utils/walletErrorMessage';
+import { requireSendCoinTransactionId } from '../../utils/sendCoinResult';
 import { calculateSendFee } from '../../utils/sendFee';
 import { useSendAmount } from '../../hooks/useSendAmount';
 import {
@@ -184,6 +186,7 @@ export default function RavencoinWallet() {
   const [openTxRvnSubmit, setOpenTxRvnSubmit] = useState(false);
   const [openSendRvnSuccess, setOpenSendRvnSuccess] = useState(false);
   const [openSendRvnError, setOpenSendRvnError] = useState(false);
+  const [sendRvnError, setSendRvnError] = useState(EMPTY_STRING);
   const [openRvnAddressBook, setOpenRvnAddressBook] = useState(false);
   const [receivePanelOpen, setReceivePanelOpen] = useState(false);
 
@@ -434,9 +437,29 @@ export default function RavencoinWallet() {
   };
 
   const sendRvnRequest = async () => {
-    // Conservative revalidation: never submit more than the safely-spendable
-    // max, even if state changed (e.g. balance refresh) after input.
-    if (rvnAmount <= 0 || rvnAmount > maxSendableRvnCoin()) {
+    setSendRvnError(EMPTY_STRING);
+    setOpenSendRvnError(false);
+    setOpenSendRvnSuccess(false);
+    if (!Number.isFinite(rvnAmount) || rvnAmount <= 0) {
+      setSendRvnError(t('core:message.error.amount_positive'));
+      setOpenSendRvnError(true);
+      return;
+    }
+    if (rvnAmount > maxSendableRvnCoin()) {
+      setSendRvnError(
+        t('core:message.error.amount_exceeds_balance', {
+          maxAmount: maxSendableRvnCoin(),
+        })
+      );
+      setOpenSendRvnError(true);
+      return;
+    }
+    if (!rvnFeeCalculated) {
+      setSendRvnError(
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
       setOpenSendRvnError(true);
       return;
     }
@@ -449,28 +472,32 @@ export default function RavencoinWallet() {
         amount: rvnAmount,
         fee: rvnFeeCalculated,
       });
-      if (!sendRequest?.error) {
-        setRvnAmount(0);
-        setRvnRecipient(EMPTY_STRING);
-        setRvnRecipientDisplayName(EMPTY_STRING);
-        setRvnFee(RVN_FEE);
-        setOpenTxRvnSubmit(false);
-        setOpenSendRvnSuccess(true);
-        setIsLoadingWalletBalanceRvn(true);
-        await timeoutDelay(TIME_SECONDS_3);
-        await getTransactionsRvn();
-      }
-    } catch (error) {
+      requireSendCoinTransactionId(
+        sendRequest,
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
       setRvnAmount(0);
       setRvnRecipient(EMPTY_STRING);
       setRvnRecipientDisplayName(EMPTY_STRING);
       setRvnFee(RVN_FEE);
-      setOpenTxRvnSubmit(false);
-      setOpenSendRvnError(true);
+      setOpenSendRvnSuccess(true);
       setIsLoadingWalletBalanceRvn(true);
       await timeoutDelay(TIME_SECONDS_3);
       await getTransactionsRvn();
-      console.error('ERROR SENDING RVN', error);
+    } catch (error) {
+      const message = walletErrorMessage(
+        error,
+        t('core:message.error.something_went_wrong', {
+          postProcess: 'capitalizeFirstChar',
+        })
+      );
+      setSendRvnError(message);
+      setOpenSendRvnError(true);
+      console.error('ERROR SENDING RVN', message);
+    } finally {
+      setOpenTxRvnSubmit(false);
     }
   };
 
@@ -616,20 +643,17 @@ export default function RavencoinWallet() {
             })}
           </Alert>
         </Snackbar>
-        <Snackbar
-          open={openSendRvnError}
-          autoHideDuration={TIME_SECONDS_4}
-          onClose={handleCloseSendRvnError}
-        >
+        <Snackbar open={openSendRvnError} onClose={handleCloseSendRvnError}>
           <Alert
             onClose={handleCloseSendRvnError}
             severity="error"
             variant="filled"
             sx={{ width: '100%' }}
           >
-            {t('core:message.error.something_went_wrong', {
-              postProcess: 'capitalizeAll',
-            })}
+            {sendRvnError ||
+              t('core:message.error.something_went_wrong', {
+                postProcess: 'capitalizeFirstChar',
+              })}
           </Alert>
         </Snackbar>
         <ExternalSendForm

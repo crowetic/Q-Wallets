@@ -64,6 +64,7 @@ vi.mock('../../components/ExternalSendForm', () => ({
   sendCoinDialogPaperSx: {},
   ExternalSendForm: (props: ComponentProps<typeof ExternalSendForm>) => (
     <>
+      <span data-testid="send-recipient">{props.recipient}</span>
       <input
         aria-label="amount"
         value={props.amount}
@@ -100,7 +101,7 @@ describe('wallet Send Max handoff', () => {
         if (action === 'GET_ARRR_SYNC_STATUS') return 'Synchronized';
         if (action === 'GET_WALLET_BALANCE') return '1';
         if (action === 'GET_USER_WALLET') return { address: 'fixture-wallet' };
-        if (action === 'SEND_COIN') return { txid: 'synthetic-test-only' };
+        if (action === 'SEND_COIN') return { txid: 'a'.repeat(64) };
         return [];
       })
     );
@@ -114,7 +115,87 @@ describe('wallet Send Max handoff', () => {
     vi.clearAllTimers();
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
+
+  it.each(
+    [
+      { coin: 'BTC', Wallet: BitcoinWallet },
+      { coin: 'LTC', Wallet: LitecoinWallet },
+      { coin: 'DOGE', Wallet: DogecoinWallet },
+      { coin: 'DGB', Wallet: DigibyteWallet },
+      { coin: 'RVN', Wallet: RavencoinWallet },
+    ].flatMap((wallet) =>
+      ['rejected', 'returned'].map((mode) => ({ ...wallet, mode }))
+    )
+  )(
+    '$coin displays a $mode host error and retains the payment draft',
+    async ({ Wallet, mode }) => {
+      const bridge = vi.mocked(qortalRequest);
+      const original = bridge.getMockImplementation()!;
+      bridge.mockImplementation(async (request) => {
+        if (request.action !== 'SEND_COIN') return original(request);
+        const error = { error: 'Node could not prepare this payment' };
+        if (mode === 'rejected') throw error;
+        return error;
+      });
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      render(<Wallet />);
+      await act(async () => {});
+      fireEvent.click(screen.getByText('Send to contact'));
+      fireEvent.change(screen.getByLabelText('fee rate'), {
+        target: { value: '10000' },
+      });
+      fireEvent.change(screen.getByLabelText('amount'), {
+        target: { value: '0.25' },
+      });
+      await act(async () => fireEvent.click(screen.getByText('Pay')));
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+      expect(
+        screen.getByText('Node could not prepare this payment')
+      ).toBeVisible();
+      expect(screen.getByLabelText('amount')).toHaveValue('0.25');
+      expect(screen.getByTestId('send-recipient')).toHaveTextContent(
+        'fixture-recipient'
+      );
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('core:message.generic.sent_transaction')
+      ).not.toBeInTheDocument();
+      expect(
+        bridge.mock.calls.filter(([request]) => request.action === 'SEND_COIN')
+      ).toHaveLength(1);
+    }
+  );
+
+  it.each([null, undefined, false, {}, '', 'ERROR'])(
+    'LTC does not report an unconfirmed send response (%s) as success',
+    async (response) => {
+      const bridge = vi.mocked(qortalRequest);
+      const original = bridge.getMockImplementation()!;
+      bridge.mockImplementation(async (request) =>
+        request.action === 'SEND_COIN' ? response : original(request)
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      render(<LitecoinWallet />);
+      await act(async () => {});
+      fireEvent.click(screen.getByText('Send to contact'));
+      fireEvent.change(screen.getByLabelText('fee rate'), {
+        target: { value: '10000' },
+      });
+      fireEvent.change(screen.getByLabelText('amount'), {
+        target: { value: '0.25' },
+      });
+      await act(async () => fireEvent.click(screen.getByText('Pay')));
+      expect(
+        screen.getByText('core:message.error.something_went_wrong')
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText('amount')).toHaveValue('0.25');
+      expect(
+        screen.queryByText('core:message.generic.sent_transaction')
+      ).not.toBeInTheDocument();
+    }
+  );
 
   it.each([
     { coin: 'BTC', Wallet: BitcoinWallet, bytes: 500, rate: 10000, sats: 10 },
