@@ -7,7 +7,7 @@ export const AppWrapper = () => {
   return (
     <GlobalProvider
       config={{
-        appName: 'Q-Wallets',
+        appName: import.meta.env.VITE_QAPP_NAME || 'Q-Wallets',
         auth: {
           balanceSetting: {
             interval: TIME_MINUTES_3,

@@ -3,7 +3,7 @@
 interface QortalRequestOptions {
   action: string;
   address?: string;
-  amount?: number | Number;
+  amount?: number | string;
   assetId?: number;
   blob?: Blob;
   blockLimit?: number;
@@ -29,6 +29,10 @@ interface QortalRequestOptions {
   limit?: number;
   list_name?: string;
   memo?: string;
+  maxFee?: string;
+  initialize?: boolean;
+  restoreHeight?: number;
+  retryPending?: boolean;
   metaData?: string;
   mimeType?: string;
   mode?: string;

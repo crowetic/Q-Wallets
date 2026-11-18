@@ -19,6 +19,12 @@ Q-Wallets is your gateway to managing multiple cryptocurrencies on the Qortal ne
 - **Digibyte (DGB)** - Fast and secure digital currency
 - **Ravencoin (RVN)** - Asset creation and transfer platform
 - **Pirate Chain (ARRR)** - Privacy-focused with shielded addresses
+- **Monero (XMR, stagenet testing)** - Local scanning and approved payments through the matching desktop Qortal Hub build
+
+The `xmr-support` branch includes a dedicated `npm run build:testing` package for
+**Q-Wallets-TESTING**. It requires the matching Hub wallet engine and Core network
+selector. See the [stagenet testing and recovery guide](docs/xmr-testing.md).
+XMR mainnet spending and QORT/XMR swaps are not enabled in this release.
 
 ### Key Features
 

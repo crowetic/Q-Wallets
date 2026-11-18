@@ -7,6 +7,7 @@ import DogecoinWallet from '../pages/doge';
 import DigibyteWallet from '../pages/dgb';
 import RavencoinWallet from '../pages/rvn';
 import PirateWallet from '../pages/arrr';
+import MoneroWallet from '../pages/xmr';
 import { EMPTY_STRING } from '../common/constants';
 
 interface CustomWindow extends Window {
@@ -30,6 +31,7 @@ export function Routes() {
           { path: 'digibyte', element: <DigibyteWallet /> },
           { path: 'ravencoin', element: <RavencoinWallet /> },
           { path: 'piratechain', element: <PirateWallet /> },
+          { path: 'monero', element: <MoneroWallet /> },
         ],
       },
     ],

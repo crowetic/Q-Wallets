@@ -2,6 +2,14 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.4.0-xmr.1] - 2026-11-18
+
+### Added
+
+- Add a desktop Hub-backed Monero wallet with receive QR, local scan progress, total/unlocked balances, recent history and approved stagenet payments.
+- Preserve 12-decimal XMR amounts as strings, block duplicate/uncertain payments and support rebroadcast of the same pending transaction.
+- Add the Q-Wallets-TESTING build identity and translated XMR interface in all 11 languages. Requires the matching XMR Hub/Core builds; QORT/XMR trades and XMR mainnet spending are not enabled.
+
 ## [1.3.11] - 2026-11-16
 
 ### Fixed

@@ -31,6 +31,7 @@ import doge from './assets/doge.png';
 import dgb from './assets/dgb.png';
 import rvn from './assets/rvn.png';
 import arrr from './assets/arrr.png';
+import { SiMonero } from 'react-icons/si';
 import qWalletsLogo from './assets/q-wallets-logo.webp';
 import { useIframe } from './hooks/useIframeListener';
 import { useTranslation } from 'react-i18next';
@@ -340,6 +341,12 @@ export default function AppLayout() {
     },
   ];
 
+  NAVIGATION.push({
+    segment: 'monero',
+    title: 'Monero',
+    icon: <SiMonero size={24} color="#f26822" />,
+  });
+
   const navItems = NAVIGATION.filter(
     (i): i is NavSegment => (i as any).segment
   );
@@ -351,6 +358,7 @@ export default function AppLayout() {
     digibyte: 'DGB',
     ravencoin: 'RVN',
     piratechain: 'ARRR',
+    monero: 'XMR',
   };
   const activeNavItem =
     navItems.find(
