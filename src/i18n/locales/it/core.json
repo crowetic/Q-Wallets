@@ -215,7 +215,13 @@
     "receive": "ricevi",
     "hide_qr": "Nascondi QR",
     "current_server": "Server attuale",
-    "reconnecting": "Connessione interrotta. Nuovo tentativo..."
+    "reconnecting": "Connessione interrotta. Nuovo tentativo...",
+    "coin_wallet": "Portafoglio {{coin}}",
+    "coin_address": "Indirizzo {{coin}}",
+    "send_symbol": "Invia {{symbol}}",
+    "show_receive_qr": "Mostra il codice QR per ricevere {{symbol}}",
+    "scan_receive": "Scansiona per ricevere",
+    "download": "Scarica"
   },
   "send": {
     "to": "A",
@@ -335,6 +341,10 @@
     "failed": "Richiesta XMR non riuscita. Controlla le versioni di Hub desktop e Core, poi riconnettiti.",
     "invalid_height": "Inserisci un’altezza intera tra 0 e l’altezza del daemon.",
     "invalid_payment": "Controlla indirizzo stagenet, importo e limite di commissione. Usa al massimo 12 decimali e lascia fondi disponibili sufficienti per il limite.",
-    "sent": "Transazione inviata: {{txId}}"
+    "sent": "Transazione inviata: {{txId}}",
+    "copy_faucet": "Copia il link del faucet",
+    "faucet_copied": "Link del faucet copiato. Incollalo nel browser.",
+    "faucet_help": "Copia il link del faucet e incollalo nel browser per ottenere monete di prova stagenet.",
+    "copy_failed": "Impossibile copiare il link. Seleziona l’URL e copialo manualmente."
   }
 }

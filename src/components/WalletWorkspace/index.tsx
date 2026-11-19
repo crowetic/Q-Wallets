@@ -61,6 +61,7 @@ import qortCoinRender from '../../assets/wallet-renders/qort-coin-render.png';
 import qortCoinIcon from '../../assets/qort.png';
 import rvnCoinRender from '../../assets/wallet-renders/rvn-coin-render.png';
 import rvnCoinIcon from '../../assets/rvn.png';
+import xmrCoinRender from '../../assets/wallet-renders/xmr-coin-render.svg';
 import {
   copyToClipboard,
   cropString,
@@ -89,7 +90,7 @@ import {
 } from '../AddressBook/avatarPalette';
 import { useTranslation } from 'react-i18next';
 
-export type WalletCoinSymbol =
+type AddressBookCoinSymbol =
   | 'QORT'
   | 'BTC'
   | 'LTC'
@@ -97,6 +98,8 @@ export type WalletCoinSymbol =
   | 'DGB'
   | 'RVN'
   | 'ARRR';
+
+export type WalletCoinSymbol = AddressBookCoinSymbol | 'XMR';
 
 type WalletVisual = {
   accent: string;
@@ -110,7 +113,7 @@ type WalletVisual = {
   symbol: WalletCoinSymbol;
 };
 
-const WALLET_VISUALS: Record<WalletCoinSymbol, WalletVisual> = {
+const WALLET_VISUALS: Record<AddressBookCoinSymbol, WalletVisual> = {
   QORT: {
     accent: '#18bdf2',
     coinIcon: qortCoinIcon,
@@ -190,7 +193,21 @@ const WALLET_VISUALS: Record<WalletCoinSymbol, WalletVisual> = {
   },
 };
 
-const getWalletVars = (visual: WalletVisual) =>
+const WALLET_DISPLAY_VISUALS = {
+  ...WALLET_VISUALS,
+  XMR: {
+    accent: '#f26822',
+    coinIcon: xmrCoinRender,
+    coinImage: xmrCoinRender,
+    decimals: 12,
+    glow: 'rgba(242, 104, 34, 0.38)',
+    glowSoft: 'rgba(242, 104, 34, 0.12)',
+    name: 'Monero',
+    symbol: 'XMR' as const,
+  },
+};
+
+const getWalletVars = (visual: Omit<WalletVisual, 'coinType'>) =>
   ({
     '--wallet-accent': visual.accent,
     '--wallet-coin-image': `url(${visual.coinImage})`,
@@ -271,7 +288,7 @@ const WALLET_BALANCE_DISPLAY_LIMIT = '999,999.99'.length;
 const formatWalletDisplayAmount = (
   value: unknown,
   symbol: WalletCoinSymbol,
-  decimals = WALLET_VISUALS[symbol].decimals
+  decimals = WALLET_DISPLAY_VISUALS[symbol].decimals
 ) => {
   if (value === null || value === undefined || value === '')
     return `0 ${symbol}`;
@@ -435,7 +452,7 @@ function ReceiveQrDialog({
   open,
 }: ReceiveQrDialogProps) {
   const { t } = useTranslation(['core']);
-  const visual = WALLET_VISUALS[coin];
+  const visual = WALLET_DISPLAY_VISUALS[coin];
   const value = address ?? '';
 
   return (
@@ -461,9 +478,7 @@ function ReceiveQrDialog({
           sx: {
             ...getWalletVars(visual),
             backgroundColor: (t: Theme) =>
-              t.palette.mode === 'dark'
-                ? 'rgba(3, 17, 29, 0.985)'
-                : '#ffffff',
+              t.palette.mode === 'dark' ? 'rgba(3, 17, 29, 0.985)' : '#ffffff',
             backgroundImage: (t: Theme) =>
               t.palette.mode === 'dark'
                 ? 'radial-gradient(circle at 16% 8%, color-mix(in srgb, var(--wallet-accent) 16%, transparent), transparent 34%), linear-gradient(180deg, rgba(5,24,39,0.99) 0%, rgba(3,13,23,0.995) 100%)'
@@ -498,7 +513,7 @@ function ReceiveQrDialog({
       >
         <Box
           component="img"
-          alt={`${visual.symbol} coin`}
+          alt={visual.symbol}
           src={visual.coinImage}
           sx={{
             filter: 'drop-shadow(0 0 18px var(--wallet-glow-soft))',
@@ -514,8 +529,8 @@ function ReceiveQrDialog({
               fontWeight: 800,
               letterSpacing: 0,
               lineHeight: 1.1,
-          }}
-        >
+            }}
+          >
             {t('core:wallet.receive_symbol', { symbol: visual.symbol })}
           </Typography>
           <Typography
@@ -527,7 +542,7 @@ function ReceiveQrDialog({
               mt: 0.35,
             }}
           >
-            {visual.name} address
+            {t('core:wallet.coin_address', { coin: visual.name })}
           </Typography>
         </Box>
         <IconButton
@@ -704,6 +719,7 @@ type WalletSummaryCardProps = {
   balanceDecimals?: number;
   balanceError?: string | null;
   coin: WalletCoinSymbol;
+  formattedBalance?: string;
   copyAddressLabel?: string;
   hideReceiveLabel?: string;
   isBalanceLoading?: boolean;
@@ -722,6 +738,7 @@ export function WalletSummaryCard({
   balanceError,
   coin,
   copyAddressLabel,
+  formattedBalance,
   hideReceiveLabel,
   isBalanceLoading,
   noAddressLabel,
@@ -732,16 +749,16 @@ export function WalletSummaryCard({
   sendLabel,
 }: WalletSummaryCardProps) {
   const { t } = useTranslation(['core']);
-  const visual = WALLET_VISUALS[coin];
+  const visual = WALLET_DISPLAY_VISUALS[coin];
   const displayCopyAddressLabel =
     copyAddressLabel ??
     t('core:action.copy_address', { postProcess: 'capitalizeFirstChar' });
-  const displayHideReceiveLabel =
-    hideReceiveLabel ?? t('core:wallet.hide_qr');
+  const displayHideReceiveLabel = hideReceiveLabel ?? t('core:wallet.hide_qr');
   const displayNoAddressLabel =
     noAddressLabel ?? t('core:wallet.no_address_available');
   const displayReceiveLabel =
-    receiveLabel ?? t('core:wallet.receive', { postProcess: 'capitalizeFirstChar' });
+    receiveLabel ??
+    t('core:wallet.receive', { postProcess: 'capitalizeFirstChar' });
   const displaySendLabel =
     sendLabel ?? t('core:action.send', { postProcess: 'capitalizeFirstChar' });
   const addressLabel = address || displayNoAddressLabel;
@@ -750,16 +767,16 @@ export function WalletSummaryCard({
     isBalanceLoading,
     balanceError
   );
-  const stableFormattedBalance = formatWalletDisplayAmount(
-    balance,
-    visual.symbol,
-    balanceDecimals
-  );
-  const displayFormattedBalance = formatWalletDisplayAmount(
-    animatedBalance ?? balance,
-    visual.symbol,
-    balanceDecimals
-  );
+  const stableFormattedBalance =
+    formattedBalance ??
+    formatWalletDisplayAmount(balance, visual.symbol, balanceDecimals);
+  const displayFormattedBalance =
+    formattedBalance ??
+    formatWalletDisplayAmount(
+      animatedBalance ?? balance,
+      visual.symbol,
+      balanceDecimals
+    );
   const balanceAmount = displayFormattedBalance.endsWith(` ${visual.symbol}`)
     ? displayFormattedBalance.slice(0, -(visual.symbol.length + 1))
     : displayFormattedBalance;
@@ -918,7 +935,7 @@ export function WalletSummaryCard({
                   lineHeight: 1.05,
                 }}
               >
-                {visual.name} Wallet
+                {t('core:wallet.coin_wallet', { coin: visual.name })}
               </Typography>
               <VerifiedRounded
                 sx={{
@@ -1083,7 +1100,9 @@ export function WalletSummaryCard({
             <WalletButtons
               variant="contained"
               startIcon={<NorthEast />}
-              aria-label={`Send ${visual.symbol}`}
+              aria-label={t('core:wallet.send_symbol', {
+                symbol: visual.symbol,
+              })}
               onClick={onSend}
               sx={{
                 background: (t) =>
@@ -1175,10 +1194,11 @@ type ReceiveQrPanelProps = {
 export function ReceiveQrPanel({
   address,
   coin,
-  downloadLabel = 'Download',
+  downloadLabel,
   onQrClick,
 }: ReceiveQrPanelProps) {
-  const visual = WALLET_VISUALS[coin];
+  const { t } = useTranslation(['core']);
+  const visual = WALLET_DISPLAY_VISUALS[coin];
   const qrRef = useRef<HTMLDivElement | null>(null);
   const value = address ?? '';
 
@@ -1218,12 +1238,14 @@ export function ReceiveQrPanel({
     >
       <Box sx={{ textAlign: 'center', width: '100%' }}>
         <Typography sx={{ fontSize: 15, fontWeight: 700, mb: 1.25 }}>
-          Receive {visual.symbol}
+          {t('core:wallet.receive_symbol', { symbol: visual.symbol })}
         </Typography>
         <Box
           component="button"
           type="button"
-          aria-label={`Show ${visual.symbol} receive QR code`}
+          aria-label={t('core:wallet.show_receive_qr', {
+            symbol: visual.symbol,
+          })}
           onClick={onQrClick}
           sx={{
             appearance: 'none',
@@ -1273,7 +1295,7 @@ export function ReceiveQrPanel({
           </Box>
         </Box>
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.25 }}>
-          Scan to receive
+          {t('core:wallet.scan_receive')}
         </Typography>
         <Box
           sx={{
@@ -1288,7 +1310,7 @@ export function ReceiveQrPanel({
             startIcon={<FileDownloadOutlined />}
             variant="outlined"
           >
-            {downloadLabel}
+            {downloadLabel ?? t('core:wallet.download')}
           </Button>
         </Box>
       </Box>
@@ -1297,7 +1319,7 @@ export function ReceiveQrPanel({
 }
 
 type WalletAddressBookPanelProps = {
-  coin: WalletCoinSymbol;
+  coin: AddressBookCoinSymbol;
   onAddContact: () => void;
   onAddressBookChange?: () => void;
   onSelectAddress: (address: string, name: string) => void;
@@ -3191,18 +3213,23 @@ type WalletWorkspaceProps = {
   balanceDecimals?: number;
   balanceError?: string | null;
   children?: ReactNode;
-  coin: WalletCoinSymbol;
+  formattedBalance?: string;
   isBalanceLoading?: boolean;
   noAddressLabel?: string;
-  onAddContact: () => void;
   onAddressBookChange?: () => void;
-  onSelectAddress: (address: string, name: string) => void;
   onSend: () => void;
   onToggleReceive: () => void;
   receiveOpen: boolean;
   rightColumnAfter?: ReactNode;
   transactions: ReactNode;
-};
+} & (
+  | {
+      coin: AddressBookCoinSymbol;
+      onAddContact: () => void;
+      onSelectAddress: (address: string, name: string) => void;
+    }
+  | { coin: 'XMR'; onAddContact?: never; onSelectAddress?: never }
+);
 
 export function WalletWorkspace({
   address,
@@ -3212,6 +3239,7 @@ export function WalletWorkspace({
   balanceError,
   children,
   coin,
+  formattedBalance,
   isBalanceLoading,
   noAddressLabel,
   onAddContact,
@@ -3223,7 +3251,7 @@ export function WalletWorkspace({
   rightColumnAfter,
   transactions,
 }: WalletWorkspaceProps) {
-  const visual = WALLET_VISUALS[coin];
+  const visual = WALLET_DISPLAY_VISUALS[coin];
   const [receiveQrDialogOpen, setReceiveQrDialogOpen] = useState(false);
 
   // The wallet summary keeps its natural width; the Address book / Sync panels
@@ -3316,6 +3344,7 @@ export function WalletWorkspace({
           balanceDecimals={balanceDecimals}
           balanceError={balanceError}
           coin={coin}
+          formattedBalance={formattedBalance}
           isBalanceLoading={isBalanceLoading}
           noAddressLabel={noAddressLabel}
           onSend={onSend}
@@ -3381,18 +3410,20 @@ export function WalletWorkspace({
             // Shown only when the panels measurably fit beside the main content
             // (see showSidePanels); otherwise they are hidden so they never
             // overlap the wallet and transaction content.
-            display: showSidePanels ? 'block' : 'none',
+            display: coin === 'XMR' || showSidePanels ? 'block' : 'none',
             position: 'relative',
             zIndex: 1,
           }}
         >
-          <WalletAddressBookPanel
-            coin={coin}
-            onAddContact={onAddContact}
-            onAddressBookChange={onAddressBookChange}
-            onSelectAddress={onSelectAddress}
-            refreshKey={addressBookRefreshKey}
-          />
+          {coin !== 'XMR' && (
+            <WalletAddressBookPanel
+              coin={coin}
+              onAddContact={onAddContact}
+              onAddressBookChange={onAddressBookChange}
+              onSelectAddress={onSelectAddress}
+              refreshKey={addressBookRefreshKey}
+            />
+          )}
           {rightColumnAfter ? (
             <Box sx={{ mt: { xs: 1.6, md: 3 } }}>{rightColumnAfter}</Box>
           ) : null}

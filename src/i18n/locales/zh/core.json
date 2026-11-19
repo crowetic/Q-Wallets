@@ -216,7 +216,13 @@
     "receive": "接收",
     "hide_qr": "隐藏 QR",
     "current_server": "当前服务器",
-    "reconnecting": "连接中断。正在重试..."
+    "reconnecting": "连接中断。正在重试...",
+    "coin_wallet": "{{coin}}钱包",
+    "coin_address": "{{coin}}地址",
+    "send_symbol": "发送{{symbol}}",
+    "show_receive_qr": "显示{{symbol}}收款二维码",
+    "scan_receive": "扫描以收款",
+    "download": "下载"
   },
   "send": {
     "to": "收款人",
@@ -336,6 +342,10 @@
     "failed": "XMR请求失败。请检查桌面版Hub和Core的版本，然后重新连接。",
     "invalid_height": "请输入0到守护进程高度之间的整数恢复高度。",
     "invalid_payment": "请检查stagenet地址、金额及手续费上限。最多使用12位小数，并保留足够可用余额以支付手续费上限。",
-    "sent": "交易已提交：{{txId}}"
+    "sent": "交易已提交：{{txId}}",
+    "copy_faucet": "复制水龙头链接",
+    "faucet_copied": "水龙头链接已复制。请粘贴到浏览器中。",
+    "faucet_help": "复制水龙头链接并粘贴到浏览器中，以获取stagenet测试币。",
+    "copy_failed": "无法复制链接。请选择网址并手动复制。"
   }
 }

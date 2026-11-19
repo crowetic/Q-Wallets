@@ -215,7 +215,13 @@
     "receive": "empfangen",
     "hide_qr": "QR ausblenden",
     "current_server": "Aktueller Server",
-    "reconnecting": "Verbindung unterbrochen. Erneuter Versuch..."
+    "reconnecting": "Verbindung unterbrochen. Erneuter Versuch...",
+    "coin_wallet": "{{coin}}-Wallet",
+    "coin_address": "{{coin}}-Adresse",
+    "send_symbol": "{{symbol}} senden",
+    "show_receive_qr": "QR-Code zum Empfang von {{symbol}} anzeigen",
+    "scan_receive": "Zum Empfangen scannen",
+    "download": "Herunterladen"
   },
   "send": {
     "to": "An",
@@ -335,6 +341,10 @@
     "failed": "Die XMR-Anfrage ist fehlgeschlagen. Prüfen Sie Desktop-Hub- und Core-Versionen und verbinden Sie sich erneut.",
     "invalid_height": "Geben Sie eine ganzzahlige Wiederherstellungshöhe zwischen 0 und der Daemon-Höhe ein.",
     "invalid_payment": "Prüfen Sie Stagenet-Adresse, Betrag und Gebührenlimit. Verwenden Sie höchstens 12 Dezimalstellen und lassen Sie genug verfügbare Mittel für das Gebührenlimit.",
-    "sent": "Transaktion übermittelt: {{txId}}"
+    "sent": "Transaktion übermittelt: {{txId}}",
+    "copy_faucet": "Faucet-Link kopieren",
+    "faucet_copied": "Faucet-Link kopiert. Fügen Sie ihn in Ihren Browser ein.",
+    "faucet_help": "Kopieren Sie den Faucet-Link und fügen Sie ihn in Ihren Browser ein, um Stagenet-Testcoins zu erhalten.",
+    "copy_failed": "Der Link konnte nicht kopiert werden. Markieren Sie die URL und kopieren Sie sie manuell."
   }
 }

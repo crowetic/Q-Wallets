@@ -215,7 +215,13 @@
     "receive": "receive",
     "hide_qr": "Hide QR",
     "current_server": "Current server",
-    "reconnecting": "Connection interrupted. Retrying..."
+    "reconnecting": "Connection interrupted. Retrying...",
+    "coin_wallet": "{{coin}} Wallet",
+    "coin_address": "{{coin}} address",
+    "send_symbol": "Send {{symbol}}",
+    "show_receive_qr": "Show {{symbol}} receive QR code",
+    "scan_receive": "Scan to receive",
+    "download": "Download"
   },
   "send": {
     "to": "To",
@@ -335,6 +341,10 @@
     "failed": "The XMR request failed. Check your desktop Hub and Core versions, then reconnect.",
     "invalid_height": "Enter a whole restore height between 0 and the daemon height.",
     "invalid_payment": "Check the stagenet address, amount and fee limit. Use at most 12 decimal places and leave enough unlocked funds for the fee limit.",
-    "sent": "Transaction submitted: {{txId}}"
+    "sent": "Transaction submitted: {{txId}}",
+    "copy_faucet": "Copy faucet link",
+    "faucet_copied": "Faucet link copied. Paste it into your browser.",
+    "faucet_help": "Copy the faucet link and paste it into your browser to get stagenet test coins.",
+    "copy_failed": "Could not copy the link. Select the URL and copy it manually."
   }
 }

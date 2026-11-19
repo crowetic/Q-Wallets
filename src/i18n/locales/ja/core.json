@@ -216,7 +216,13 @@
     "receive": "受け取る",
     "hide_qr": "QRを非表示",
     "current_server": "現在のサーバー",
-    "reconnecting": "接続が中断されました。再試行しています..."
+    "reconnecting": "接続が中断されました。再試行しています...",
+    "coin_wallet": "{{coin}}ウォレット",
+    "coin_address": "{{coin}}アドレス",
+    "send_symbol": "{{symbol}}を送信",
+    "show_receive_qr": "{{symbol}}受取用QRコードを表示",
+    "scan_receive": "スキャンして受け取る",
+    "download": "ダウンロード"
   },
   "send": {
     "to": "宛先",
@@ -336,6 +342,10 @@
     "failed": "XMRリクエストに失敗しました。デスクトップ版HubとCoreのバージョンを確認して再接続してください。",
     "invalid_height": "0からデーモンの高さまでの整数を入力してください。",
     "invalid_payment": "stagenetアドレス、金額、手数料上限を確認してください。小数点以下は12桁まで使用でき、手数料上限分の利用可能残高を残す必要があります。",
-    "sent": "トランザクションを送信しました：{{txId}}"
+    "sent": "トランザクションを送信しました：{{txId}}",
+    "copy_faucet": "フォーセットのリンクをコピー",
+    "faucet_copied": "フォーセットのリンクをコピーしました。ブラウザーに貼り付けてください。",
+    "faucet_help": "フォーセットのリンクをコピーしてブラウザーに貼り付けると、stagenetのテストコインを入手できます。",
+    "copy_failed": "リンクをコピーできませんでした。URLを選択して手動でコピーしてください。"
   }
 }

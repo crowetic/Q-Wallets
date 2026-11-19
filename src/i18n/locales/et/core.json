@@ -215,7 +215,13 @@
     "receive": "vota vastu",
     "hide_qr": "Peida QR",
     "current_server": "Praegune server",
-    "reconnecting": "Ühendus katkes. Proovin uuesti..."
+    "reconnecting": "Ühendus katkes. Proovin uuesti...",
+    "coin_wallet": "{{coin}} rahakott",
+    "coin_address": "{{coin}} aadress",
+    "send_symbol": "Saada {{symbol}}",
+    "show_receive_qr": "Näita {{symbol}} vastuvõtmise QR-koodi",
+    "scan_receive": "Vastuvõtmiseks skanni",
+    "download": "Laadi alla"
   },
   "send": {
     "to": "Saaja",
@@ -335,6 +341,10 @@
     "failed": "XMR-päring ebaõnnestus. Kontrolli töölaua Hubi ja Core’i versioone ning ühenda uuesti.",
     "invalid_height": "Sisesta täisarvuline taastamiskõrgus vahemikus 0 kuni daemoni kõrgus.",
     "invalid_payment": "Kontrolli stagenet-aadressi, summat ja tasupiiri. Kasuta kuni 12 kümnendkohta ning jäta tasupiiri jaoks piisavalt kasutatavat raha.",
-    "sent": "Tehing edastatud: {{txId}}"
+    "sent": "Tehing edastatud: {{txId}}",
+    "copy_faucet": "Kopeeri mündikraani link",
+    "faucet_copied": "Mündikraani link on kopeeritud. Kleebi see brauserisse.",
+    "faucet_help": "Kopeeri mündikraani link ja kleebi see brauserisse, et saada stageneti testmünte.",
+    "copy_failed": "Linki ei saanud kopeerida. Vali URL ja kopeeri see käsitsi."
   }
 }

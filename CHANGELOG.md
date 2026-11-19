@@ -2,6 +2,18 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.4.0-xmr.2] - 2026-11-18
+
+### Changed
+
+- Use the shared wallet layout for XMR, including an orange Monero coin image, balance summary, Send dialog, transaction card and the standard Receive QR panel with an enlarged QR dialog.
+- Replace the blocked external faucet link with a copy-link button, clipboard confirmation and a selectable URL with manual-paste guidance. Show a clear error if clipboard access fails.
+- Translate the new clipboard feedback and shared wallet labels in all 11 languages. Preserve XMR amount precision, stagenet restrictions, synchronization checks and pending-payment recovery.
+
+### Tests
+
+- Cover faucet copying and clipboard failure, shared XMR branding/receive controls and the QR dialog, alongside existing payment and account-change guards.
+
 ## [1.4.0-xmr.1] - 2026-11-18
 
 ### Added
