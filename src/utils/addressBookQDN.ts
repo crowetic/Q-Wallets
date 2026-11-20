@@ -1,5 +1,5 @@
 import { base64ToObject, Coin, objectToBase64 } from 'qapp-core';
-import { AddressBookEntry } from './Types';
+import { AddressBookCoin, AddressBookEntry } from './Types';
 import type { AddressBookLocalStorage } from './addressBookStorage';
 import {
   createAddressBookSyncSignature,
@@ -14,8 +14,8 @@ import {
 /**
  * Get all available coin types from the Coin enum
  */
-function getAvailableCoins(): Coin[] {
-  return Object.values(Coin);
+function getAvailableCoins(): AddressBookCoin[] {
+  return [...Object.values(Coin), 'XMR'];
 }
 
 /**
@@ -324,7 +324,7 @@ async function syncAddressBookOnStartup(
 ): Promise<void> {
   try {
     // Get data from both sources
-    const localEntries = getAddressBook(coinType as Coin);
+    const localEntries = getAddressBook(coinType as AddressBookCoin);
     const qdnData = await fetchFromQDN(coinType, userName);
 
     // If no QDN data exists, leave local data alone and wait for an

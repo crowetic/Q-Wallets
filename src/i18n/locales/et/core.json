@@ -237,7 +237,7 @@
     "qort_address_or_name": "QORT-aadress voi nimi",
     "receiver_address_or_name": "Saaja aadress voi nimi",
     "max_sendable_loading": "Maksimaalne saadetav laeb",
-    "symbol_amount": "{{symbol}} summa",
+    "symbol_amount": "Summa ({{symbol}})",
     "network_fee": "Vorgutasu",
     "network_fee_max_tooltip": "Vorgutasu lahutatakse maksimaalsest saadetavast summast",
     "current_network_fee_tooltip": "Praegune vorgu saatmistasu. See summa reserveeritakse maksimaalsest saadetavast saldost.",
@@ -345,6 +345,16 @@
     "copy_faucet": "Kopeeri mündikraani link",
     "faucet_copied": "Mündikraani link on kopeeritud. Kleebi see brauserisse.",
     "faucet_help": "Kopeeri mündikraani link ja kleebi see brauserisse, et saada stageneti testmünte.",
-    "copy_failed": "Linki ei saanud kopeerida. Vali URL ja kopeeri see käsitsi."
+    "copy_failed": "Linki ei saanud kopeerida. Vali URL ja kopeeri see käsitsi.",
+    "invalid_recipient": "Sisesta 95 märgi pikkune stageneti aadress või alamaadress. Hub kontrollib enne saatmist kontrollsummat.",
+    "invalid_amount": "Sisesta nullist suurem summa kuni 12 komakohaga (näiteks 0.05).",
+    "invalid_fee": "Sisesta nullist suurem ja kuni 1 XMR teenustasu piir kuni 12 komakohaga.",
+    "insufficient_unlocked": "Summa koos teenustasu piiriga ületab vabastatud saldo.",
+    "hash_copy_failed": "Tehinguräsi kopeerimine ebaõnnestus. Vali see ja kopeeri käsitsi.",
+    "hash_copied": "Tehinguräsi kopeeritud",
+    "confirmations": "Kinnitused",
+    "received": "Saadud",
+    "sent_label": "Saadetud",
+    "unconfirmed": "Kinnitamata"
   }
 }

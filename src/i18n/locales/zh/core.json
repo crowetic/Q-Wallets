@@ -238,7 +238,7 @@
     "qort_address_or_name": "QORT 地址或名称",
     "receiver_address_or_name": "接收者地址或名称",
     "max_sendable_loading": "正在加载最大可发送金额",
-    "symbol_amount": "{{symbol}} 金额",
+    "symbol_amount": "金额（{{symbol}}）",
     "network_fee": "网络费用",
     "network_fee_max_tooltip": "从最大可发送金额中扣除的网络费用",
     "current_network_fee_tooltip": "当前网络发送费用。此金额会从最大可发送余额中预留。",
@@ -346,6 +346,16 @@
     "copy_faucet": "复制水龙头链接",
     "faucet_copied": "水龙头链接已复制。请粘贴到浏览器中。",
     "faucet_help": "复制水龙头链接并粘贴到浏览器中，以获取stagenet测试币。",
-    "copy_failed": "无法复制链接。请选择网址并手动复制。"
+    "copy_failed": "无法复制链接。请选择网址并手动复制。",
+    "invalid_recipient": "请输入95个字符的stagenet地址或子地址。Hub会在发送前验证校验和。",
+    "invalid_amount": "请输入大于零且最多12位小数的金额（例如0.05）。",
+    "invalid_fee": "请输入大于零且不超过1 XMR的手续费上限，最多12位小数。",
+    "insufficient_unlocked": "金额与手续费上限之和超过已解锁余额。",
+    "hash_copy_failed": "无法复制交易哈希。请选中并手动复制。",
+    "hash_copied": "已复制交易哈希",
+    "confirmations": "确认数",
+    "received": "已接收",
+    "sent_label": "已发送",
+    "unconfirmed": "未确认"
   }
 }

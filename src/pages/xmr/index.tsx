@@ -3,29 +3,32 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   LinearProgress,
-  DialogActions,
-  DialogContent,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import ContentCopy from '@mui/icons-material/ContentCopy';
+import { WalletWorkspace } from '../../components/WalletWorkspace';
+import { WalletCard, WalletSendDialog } from '../../styles/page-styles';
 import {
-  WalletWorkspace,
-  WalletTransactionsCard,
-} from '../../components/WalletWorkspace';
-import { WalletSendDialog } from '../../styles/page-styles';
+  ExternalSendForm,
+  ExactSendAmountInput,
+  sendCoinDialogPaperSx,
+} from '../../components/ExternalSendForm';
+import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
+import xmrLogo from '../../assets/wallet-renders/xmr-coin-render.svg';
+import XmrTransactions from './transactions';
 import walletContext from '../../contexts/walletContext';
 import {
-  atomicAmount,
   checkedReply,
   decimalAmount,
   publicWallet,
+  maxPaymentAmount,
+  validatePayment,
+  type PaymentErrors,
   walletStatus,
   type XmrStatus,
   type XmrWallet,
@@ -54,8 +57,21 @@ export default function MoneroWallet() {
   const [busy, setBusy] = useState(false);
   const [restoreHeight, setRestoreHeight] = useState('0');
   const [recipient, setRecipient] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amountSelection, setAmountSelection] = useState({
+    amount: '',
+    max: false,
+  });
+  const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
+  const [addressBookOpen, setAddressBookOpen] = useState(false);
+  const [recipientName, setRecipientName] = useState('');
   const [maxFee, setMaxFee] = useState('0.001');
+  const maxSendable = maxPaymentAmount(
+    status?.unlockedBalanceAtomic ?? '0',
+    maxFee
+  );
+  const amount = amountSelection.max ? maxSendable : amountSelection.amount;
+  const setAmount = (value: string) =>
+    setAmountSelection({ amount: value, max: false });
   const generation = useRef(0);
   const working = useRef(false);
   const mode = `${account}:${nodeInfo?.isTestNet}:${nodeInfo?.moneroNetwork}`;
@@ -68,7 +84,11 @@ export default function MoneroWallet() {
     setError('');
     setMessage('');
     setRecipient('');
-    setAmount('');
+    setRecipientName('');
+    setAddressBookOpen(false);
+    setPaymentErrors({});
+    setMaxFee('0.001');
+    setAmountSelection({ amount: '', max: false });
     setRestoreHeight('0');
     setBusy(false);
     working.current = false;
@@ -179,26 +199,19 @@ export default function MoneroWallet() {
         (status.pending && !retryPending)
       )
         throw new Error(t('core:xmr.wait_sync'));
+      const { errors, payment } = validatePayment(
+        { recipient, amount, maxFee },
+        status.unlockedBalanceAtomic
+      );
       if (!retryPending) {
-        try {
-          if (
-            !/^[1-9A-HJ-NP-Za-km-z]{95}$/.test(recipient) ||
-            atomicAmount(maxFee) > 1000000000000n ||
-            atomicAmount(amount) + atomicAmount(maxFee) >
-              BigInt(status.unlockedBalanceAtomic)
-          )
-            throw new Error();
-        } catch {
-          throw new Error(t('core:xmr.invalid_payment'));
-        }
+        setPaymentErrors(errors);
+        if (Object.keys(errors).length) return;
       }
       const txId = checkedReply(
         await walletRequest({
           action: 'SEND_COIN',
           coin: 'XMR',
-          ...(retryPending
-            ? { retryPending: true }
-            : { recipient, amount, maxFee }),
+          ...(retryPending ? { retryPending: true } : payment),
         })
       );
       if (typeof txId !== 'string' || !/^[a-f0-9]{64}$/.test(txId))
@@ -230,11 +243,14 @@ export default function MoneroWallet() {
 
   return (
     <Stack spacing={3} sx={{ mt: 2, width: '100%' }}>
-      <Stack alignItems="center" direction="row" spacing={2}>
-        <Typography variant="h4">Monero</Typography>
-        <Chip color="warning" label={t('core:xmr.testing')} />
-      </Stack>
-      <Alert severity="warning">{t('core:xmr.stagenet_only')}</Alert>
+      <Alert
+        severity="warning"
+        action={
+          <Chip color="warning" label={t('core:xmr.testing')} size="small" />
+        }
+      >
+        {t('core:xmr.stagenet_only')}
+      </Alert>
       {!isAuthenticated ? (
         <Alert severity="info">{t('core:xmr.login')}</Alert>
       ) : isUsingGateway ? (
@@ -244,7 +260,7 @@ export default function MoneroWallet() {
           {t('core:xmr.connect')}
         </Button>
       ) : null}
-      {error && (
+      {error && !sendOpen && (
         <Alert severity="error" sx={{ overflowWrap: 'anywhere' }}>
           {error}
         </Alert>
@@ -260,20 +276,38 @@ export default function MoneroWallet() {
       {wallet?.network === 'stagenet' && (
         <>
           <WalletWorkspace
+            key={`wallet:${mode}`}
             address={wallet.address}
-            balance={status ? decimalAmount(status.balanceAtomic) : null}
+            addressBookRefreshKey={addressBookOpen}
+            balance={
+              status ? decimalAmount(status.unlockedBalanceAtomic) : null
+            }
             balanceDecimals={12}
             coin="XMR"
             formattedBalance={
-              status ? `${decimalAmount(status.balanceAtomic)} XMR` : undefined
+              status
+                ? `${decimalAmount(status.unlockedBalanceAtomic)} XMR`
+                : undefined
             }
             isBalanceLoading={!status}
-            onSend={() => setSendOpen(true)}
+            onAddContact={() => setAddressBookOpen(true)}
+            onSelectAddress={(address, name) => {
+              setRecipient(address);
+              setRecipientName(name);
+              setPaymentErrors({});
+              setError('');
+              setSendOpen(true);
+            }}
+            onSend={() => {
+              setPaymentErrors({});
+              setError('');
+              setSendOpen(true);
+            }}
             onToggleReceive={() => setReceiveOpen((open) => !open)}
             receiveOpen={receiveOpen}
             rightColumnAfter={
-              <Card>
-                <CardContent>
+              <WalletCard>
+                <Box sx={{ p: 2.5 }}>
                   <Stack spacing={2}>
                     <Typography variant="h6">
                       {t('core:xmr.receive')}
@@ -299,12 +333,13 @@ export default function MoneroWallet() {
                       {t('core:xmr.backup')}
                     </Typography>
                   </Stack>
-                </CardContent>
-              </Card>
+                </Box>
+              </WalletCard>
             }
             transactions={
-              <WalletTransactionsCard
-                title={t('core:xmr.history')}
+              <XmrTransactions
+                key={mode}
+                rows={status?.transactions ?? []}
                 isRefreshing={busy}
                 onRefresh={() =>
                   run(async (revision) => {
@@ -312,53 +347,12 @@ export default function MoneroWallet() {
                     if (revision === generation.current) setStatus(next);
                   })
                 }
-              >
-                <Stack spacing={2}>
-                  {!status?.transactions.length && (
-                    <Typography>{t('core:xmr.no_transactions')}</Typography>
-                  )}
-                  {status?.transactions.map((tx) => (
-                    <Box
-                      key={tx.txId}
-                      sx={{
-                        borderBottom: 1,
-                        borderColor: 'divider',
-                        paddingBottom: 2,
-                      }}
-                    >
-                      <Typography>
-                        {t(
-                          tx.incoming
-                            ? 'core:xmr.incoming'
-                            : 'core:xmr.outgoing',
-                          {
-                            amount: decimalAmount(tx.amountAtomic),
-                            confirmations: tx.confirmations,
-                          }
-                        )}
-                      </Typography>
-                      <Typography>
-                        {t('core:xmr.fee', {
-                          amount: decimalAmount(tx.feeAtomic),
-                        })}
-                      </Typography>
-                      <Typography
-                        sx={{
-                          fontFamily: 'monospace',
-                          overflowWrap: 'anywhere',
-                        }}
-                      >
-                        {tx.txId}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              </WalletTransactionsCard>
+              />
             }
           >
             {status && (
-              <Card>
-                <CardContent>
+              <WalletCard>
+                <Box sx={{ p: 2.5 }}>
                   <Stack spacing={2}>
                     <Typography variant="h6">{t('core:xmr.wallet')}</Typography>
                     <Typography>
@@ -430,8 +424,8 @@ export default function MoneroWallet() {
                       </>
                     )}
                   </Stack>
-                </CardContent>
-              </Card>
+                </Box>
+              </WalletCard>
             )}
             {status?.pending && (
               <Alert severity="warning">
@@ -449,66 +443,129 @@ export default function MoneroWallet() {
               </Alert>
             )}
           </WalletWorkspace>
+          <AddressBookDialog
+            key={`contacts:${mode}`}
+            coinType="XMR"
+            open={addressBookOpen}
+            onClose={() => setAddressBookOpen(false)}
+            onSelectAddress={(address, name) => {
+              setRecipient(address);
+              setRecipientName(name);
+              setPaymentErrors({});
+              setError('');
+              setAddressBookOpen(false);
+              setSendOpen(true);
+            }}
+          />
           <WalletSendDialog
             open={sendOpen}
             onClose={() => setSendOpen(false)}
-            aria-labelledby="xmr-send-title"
+            maxWidth={false}
+            fullWidth
+            slotProps={{
+              paper: {
+                sx: sendCoinDialogPaperSx,
+                'aria-label': t('core:xmr.send'),
+              },
+            }}
           >
-            <DialogContent>
-              <Stack
-                component="form"
-                spacing={2}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void send();
+            <Box
+              component="form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void send();
+              }}
+            >
+              <ExternalSendForm
+                addressInputId="xmr-recipient"
+                addressError={!!paymentErrors.recipient}
+                addressHelperText={
+                  paymentErrors.recipient ? t(paymentErrors.recipient) : ''
+                }
+                amountContent={
+                  <ExactSendAmountInput
+                    symbol="XMR"
+                    label={t('core:xmr.amount')}
+                    value={amount}
+                    onChange={(value) => {
+                      setAmount(value);
+                      setPaymentErrors({});
+                    }}
+                    disabled={busy}
+                    error={!!paymentErrors.amount}
+                    helperText={
+                      paymentErrors.amount ? t(paymentErrors.amount) : undefined
+                    }
+                  />
+                }
+                afterRecipientContent={
+                  <>
+                    {error && (
+                      <Alert severity="error" sx={{ overflowWrap: 'anywhere' }}>
+                        {error}
+                      </Alert>
+                    )}
+                    <Alert severity="info">{t('core:xmr.payment_help')}</Alert>
+                  </>
+                }
+                balance={
+                  status ? decimalAmount(status.unlockedBalanceAtomic) : null
+                }
+                coinLogo={xmrLogo}
+                feeContent={
+                  <TextField
+                    fullWidth
+                    label={t('core:xmr.max_fee')}
+                    value={maxFee}
+                    onChange={(event) => {
+                      setMaxFee(event.target.value);
+                      setPaymentErrors({});
+                    }}
+                    disabled={busy}
+                    error={!!paymentErrors.maxFee}
+                    helperText={
+                      paymentErrors.maxFee ? t(paymentErrors.maxFee) : undefined
+                    }
+                    slotProps={{ htmlInput: { inputMode: 'decimal' } }}
+                  />
+                }
+                isSubmitting={busy}
+                isBalanceLoading={!status}
+                maxSendable={maxSendable}
+                onClose={() => setSendOpen(false)}
+                onClearRecipient={() => {
+                  setRecipient('');
+                  setRecipientName('');
+                  setPaymentErrors({});
                 }}
-              >
-                <Typography id="xmr-send-title" variant="h6">
-                  {t('core:xmr.send')}
-                </Typography>
-                <TextField
-                  label={t('core:xmr.recipient')}
-                  value={recipient}
-                  onChange={(event) => setRecipient(event.target.value)}
-                  disabled={busy}
-                  autoComplete="off"
-                />
-                <TextField
-                  label={t('core:xmr.amount')}
-                  value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
-                  disabled={busy}
-                  slotProps={{ htmlInput: { inputMode: 'decimal' } }}
-                />
-                <TextField
-                  label={t('core:xmr.max_fee')}
-                  value={maxFee}
-                  onChange={(event) => setMaxFee(event.target.value)}
-                  disabled={busy}
-                  slotProps={{ htmlInput: { inputMode: 'decimal' } }}
-                />
-                <Typography variant="body2">
-                  {t('core:xmr.payment_help')}
-                </Typography>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={
-                    busy ||
-                    !status?.synced ||
-                    status.syncing ||
-                    !!status.pending
-                  }
-                >
-                  {t('core:xmr.approve')}
-                </Button>
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setSendOpen(false)}>
-                {t('core:action.close', { postProcess: 'capitalizeFirstChar' })}
-              </Button>
-            </DialogActions>
+                onOpenAddressBook={() => setAddressBookOpen(true)}
+                onRecipientChange={(event) => {
+                  setRecipient(event.target.value);
+                  setRecipientName('');
+                  setPaymentErrors({});
+                }}
+                onSend={() => void send()}
+                onSendMax={() => {
+                  setAmountSelection({ amount: '', max: true });
+                  setPaymentErrors({});
+                }}
+                recipient={recipient}
+                recipientDisplayName={recipientName}
+                recipientInputProps={{ 'aria-label': t('core:xmr.recipient') }}
+                sendDisabled={
+                  busy || !status?.synced || status.syncing || !!status.pending
+                }
+                sendMaxDisabled={
+                  busy ||
+                  maxSendable === '0' ||
+                  !status?.synced ||
+                  status.syncing ||
+                  !!status.pending
+                }
+                showAddressBookButton
+                symbol="XMR"
+              />
+            </Box>
           </WalletSendDialog>
         </>
       )}

@@ -2,6 +2,26 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.4.0-xmr.3] - 2026-11-20
+
+### Fixed
+
+- Accept fractional XMR payment and fee inputs such as `.05` and normalize them to exact decimal strings before asking Hub to send. Reject excess decimal places without rounding.
+- Identify invalid recipient, amount, fee limit and insufficient unlocked funds beside the affected field. Keep Hub errors inside the send dialog and retain the draft after a failed or declined payment.
+- Show unlocked XMR as the available balance, with total balance and scan information retained below.
+
+### Changed
+
+- Use the other wallets' shared transfer dialog, Monero logo and Send button. Hub still verifies the full address and requests approval before signing.
+- Add exact Send Max with the full maximum fee reserved from unlocked funds. Max follows fee and balance changes until the amount is edited manually.
+- Add XMR contacts to the shared address book, including search, favorites, editing, selection and account isolation. Include XMR in encrypted address-book startup reads; publishing remains an explicit user action.
+- Use the shared wallet cards and a paginated transaction list with direction, exact amounts/fees, confirmations, dates and copyable hashes. Retain receive QR, faucet copying, synchronization and pending-payment safeguards.
+- Translate new validation and history labels in all 11 languages. This is a Q-Wallets-TESTING update and does not enable QORT/XMR cross-chain trades.
+
+### Tests
+
+- Reproduce the reported `.05` rejection on the previous source; cover canonical Hub handoff, exact maximum amounts, field errors, declined approval, contacts/account isolation and transaction pagination/copying.
+
 ## [1.4.0-xmr.2] - 2026-11-18
 
 ### Changed

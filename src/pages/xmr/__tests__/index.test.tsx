@@ -1,8 +1,20 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import walletContext, { defaultState } from '../../../contexts/walletContext';
 import MoneroWallet from '../index';
 import xmrLogo from '../../../assets/wallet-renders/xmr-coin-render.svg';
+import {
+  addAddress,
+  getAddressBook,
+  setAddressBookAccountScope,
+} from '../../../utils/addressBookStorage';
+import { Coin } from 'qapp-core';
 const status = {
   network: 'stagenet',
   address: '5' + 'a'.repeat(94),
@@ -36,6 +48,7 @@ beforeEach(() => {
     request(options)
   );
   request.mockReset();
+  setAddressBookAccountScope(state.address);
   vi.mocked(navigator.clipboard.writeText).mockReset().mockResolvedValue();
   vi.stubGlobal(
     'ResizeObserver',
@@ -85,7 +98,7 @@ it('uses only public Hub bridge calls and displays all 12 decimal places', async
   expect(screen.getByText('1.000000000001')).toBeInTheDocument();
   openSend();
   expect(
-    screen.getByRole('button', { name: 'core:xmr.approve' })
+    screen.getByRole('button', { name: 'core:action.send capitalizeFirstChar' })
   ).toBeEnabled();
 });
 it('defaults recovery to height zero and requires an explicit start action', async () => {
@@ -130,7 +143,9 @@ it('sends an exact decimal string and fee limit, then disables duplicate submiss
   fireEvent.change(screen.getByLabelText('core:xmr.amount'), {
     target: { value: '0.000000000001' },
   });
-  fireEvent.click(screen.getByText('core:xmr.approve'));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'core:action.send capitalizeFirstChar' })
+  );
   await waitFor(() =>
     expect(request).toHaveBeenCalledWith({
       action: 'SEND_COIN',
@@ -146,7 +161,7 @@ it('sends an exact decimal string and fee limit, then disables duplicate submiss
   );
   openSend();
   expect(
-    screen.getByRole('button', { name: 'core:xmr.approve' })
+    screen.getByRole('button', { name: 'core:action.send capitalizeFirstChar' })
   ).toBeDisabled();
 });
 it('does not initialize or display a receive address for mainnet in this testing release', async () => {
@@ -199,9 +214,13 @@ it('blocks a new payment with an unresolved intent and retries without new payme
   await screen.findByText('core:xmr.retry_payment');
   openSend();
   expect(
-    screen.getByRole('button', { name: 'core:xmr.approve' })
+    screen.getByRole('button', { name: 'core:action.send capitalizeFirstChar' })
   ).toBeDisabled();
-  fireEvent.click(screen.getByText('core:action.close capitalizeFirstChar'));
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'core:action.close capitalizeFirstChar',
+    })
+  );
   await waitFor(() =>
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   );
@@ -279,9 +298,233 @@ it('preserves all atomic units in a large summary balance', async () => {
   request.mockImplementation(async ({ action }) =>
     action === 'GET_USER_WALLET'
       ? { address: status.address, network: 'stagenet' }
-      : { ...status, balanceAtomic: '1000000000000000001' }
+      : {
+          ...status,
+          balanceAtomic: '1000000000000000001',
+          unlockedBalanceAtomic: '1000000000000000001',
+        }
   );
   show();
   await connect();
   expect(await screen.findByText('1000000.000000000001')).toBeInTheDocument();
+});
+
+it('accepts .05 from the reported send and hands a canonical amount to Hub', async () => {
+  request.mockImplementation(async ({ action }) =>
+    action === 'GET_USER_WALLET'
+      ? { address: status.address, network: 'stagenet' }
+      : action === 'SEND_COIN'
+        ? 'b'.repeat(64)
+        : { ...status, unlockedBalanceAtomic: '500000000000' }
+  );
+  show();
+  await connect();
+  openSend();
+  fireEvent.change(screen.getByLabelText('core:xmr.recipient'), {
+    target: { value: status.address },
+  });
+  fireEvent.change(screen.getByLabelText('core:xmr.amount'), {
+    target: { value: '.05' },
+  });
+  fireEvent.click(
+    screen.getByRole('button', { name: 'core:action.send capitalizeFirstChar' })
+  );
+  await waitFor(() =>
+    expect(request).toHaveBeenCalledWith({
+      action: 'SEND_COIN',
+      coin: 'XMR',
+      recipient: status.address,
+      amount: '0.05',
+      maxFee: '0.001',
+    })
+  );
+});
+
+it.each([
+  ['core:xmr.amount', '0.0000000000001', 'core:xmr.invalid_amount'],
+  ['core:xmr.amount', '.9999', 'core:xmr.insufficient_unlocked'],
+  ['core:xmr.max_fee', '1.000000000001', 'core:xmr.invalid_fee'],
+  ['core:xmr.recipient', 'bad-address', 'core:xmr.invalid_recipient'],
+])(
+  'keeps validation for %s visible in the send dialog without calling Hub',
+  async (label, value, error) => {
+    mockConnectedWallet();
+    show();
+    await connect();
+    openSend();
+    fireEvent.change(screen.getByLabelText('core:xmr.recipient'), {
+      target: { value: status.address },
+    });
+    fireEvent.change(screen.getByLabelText('core:xmr.amount'), {
+      target: { value: '.05' },
+    });
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'core:action.send capitalizeFirstChar',
+      })
+    );
+    expect(
+      await within(screen.getByRole('dialog')).findByText(error)
+    ).toBeInTheDocument();
+    expect(
+      request.mock.calls.some(([args]) => args.action === 'SEND_COIN')
+    ).toBe(false);
+  }
+);
+
+it('keeps a rejected Hub payment visible in the dialog with its draft intact', async () => {
+  request.mockImplementation(async ({ action }) =>
+    action === 'GET_USER_WALLET'
+      ? { address: status.address, network: 'stagenet' }
+      : action === 'SEND_COIN'
+        ? { error: 'Payment approval declined' }
+        : status
+  );
+  show();
+  await connect();
+  openSend();
+  fireEvent.change(screen.getByLabelText('core:xmr.recipient'), {
+    target: { value: status.address },
+  });
+  fireEvent.change(screen.getByLabelText('core:xmr.amount'), {
+    target: { value: '.05' },
+  });
+  fireEvent.click(
+    screen.getByRole('button', { name: 'core:action.send capitalizeFirstChar' })
+  );
+  await within(screen.getByRole('dialog')).findByText(
+    'Payment approval declined'
+  );
+  expect(screen.getByLabelText('core:xmr.amount')).toHaveValue('.05');
+  expect(screen.getByLabelText('core:xmr.recipient')).toHaveValue(
+    status.address
+  );
+  expect(
+    request.mock.calls.filter(([args]) => args.action === 'SEND_COIN')
+  ).toHaveLength(1);
+});
+
+it('freezes the draft while Hub reviews it and blocks duplicate submissions', async () => {
+  let complete!: (value: unknown) => void;
+  request.mockImplementation(async ({ action }) =>
+    action === 'GET_USER_WALLET'
+      ? { address: status.address, network: 'stagenet' }
+      : action === 'SEND_COIN'
+        ? new Promise((resolve) => {
+            complete = resolve;
+          })
+        : status
+  );
+  show();
+  await connect();
+  openSend();
+  fireEvent.change(screen.getByLabelText('core:xmr.recipient'), {
+    target: { value: status.address },
+  });
+  fireEvent.change(screen.getByLabelText('core:xmr.amount'), {
+    target: { value: '.05' },
+  });
+  const send = screen.getByRole('button', {
+    name: 'core:action.send capitalizeFirstChar',
+  });
+  fireEvent.click(send);
+  await waitFor(() => expect(send).toBeDisabled());
+  expect(screen.getByLabelText('core:xmr.recipient')).toBeDisabled();
+  expect(screen.getByLabelText('core:xmr.amount')).toBeDisabled();
+  expect(screen.getByLabelText('core:xmr.max_fee')).toBeDisabled();
+  expect(
+    screen.getByRole('button', { name: 'core:action.open_address_book' })
+  ).toBeDisabled();
+  fireEvent.click(send);
+  expect(
+    request.mock.calls.filter(([args]) => args.action === 'SEND_COIN')
+  ).toHaveLength(1);
+  complete({ error: 'Approval cancelled' });
+  await screen.findByText('Approval cancelled');
+  expect(send).toBeEnabled();
+});
+
+it('tracks Max against fee edits while preserving exact precision and manual amounts', async () => {
+  mockConnectedWallet();
+  show();
+  await connect();
+  openSend();
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'core:action.send_max capitalizeFirstChar',
+    })
+  );
+  expect(screen.getByLabelText('core:xmr.amount')).toHaveValue(
+    '0.999000000001'
+  );
+  fireEvent.change(screen.getByLabelText('core:xmr.max_fee'), {
+    target: { value: '.002' },
+  });
+  expect(screen.getByLabelText('core:xmr.amount')).toHaveValue(
+    '0.998000000001'
+  );
+  fireEvent.change(screen.getByLabelText('core:xmr.amount'), {
+    target: { value: '.05' },
+  });
+  fireEvent.change(screen.getByLabelText('core:xmr.max_fee'), {
+    target: { value: '.003' },
+  });
+  expect(screen.getByLabelText('core:xmr.amount')).toHaveValue('.05');
+  fireEvent.change(screen.getByLabelText('core:xmr.max_fee'), {
+    target: { value: '' },
+  });
+  expect(
+    screen.getByRole('button', {
+      name: 'core:action.send_max capitalizeFirstChar',
+    })
+  ).toBeDisabled();
+});
+
+it('shows unlocked funds as available while retaining the total and scan information', async () => {
+  request.mockImplementation(async ({ action }) =>
+    action === 'GET_USER_WALLET'
+      ? { address: status.address, network: 'stagenet' }
+      : {
+          ...status,
+          balanceAtomic: '1000000000001',
+          unlockedBalanceAtomic: '500000000001',
+        }
+  );
+  show();
+  await connect();
+  expect(await screen.findByText('0.500000000001')).toBeInTheDocument();
+  expect(screen.getByText('core:xmr.total 1.000000000001')).toBeInTheDocument();
+  expect(screen.getByText('core:xmr.heights 100 100')).toBeInTheDocument();
+});
+
+it('uses saved XMR contacts with the common address book without mixing coins or accounts', async () => {
+  mockConnectedWallet();
+  addAddress({
+    name: 'Stagenet friend',
+    address: status.address,
+    note: '',
+    coinType: 'XMR',
+  });
+  addAddress({
+    name: 'Bitcoin friend',
+    address: 'btc-test-address',
+    note: '',
+    coinType: Coin.BTC,
+  });
+  show();
+  await connect();
+  expect(screen.queryByText('Bitcoin friend')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('Stagenet friend'));
+  expect(await screen.findByRole('dialog')).toHaveTextContent(
+    'Stagenet friend'
+  );
+  expect(
+    screen.getByRole('button', { name: 'core:action.open_address_book' })
+  ).toBeInTheDocument();
+  setAddressBookAccountScope('Q-another-account');
+  expect(getAddressBook('XMR')).toEqual([]);
+  setAddressBookAccountScope(state.address);
+  expect(getAddressBook('XMR')).toHaveLength(1);
+  expect(getAddressBook(Coin.BTC)).toHaveLength(1);
 });

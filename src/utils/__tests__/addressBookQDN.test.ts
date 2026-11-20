@@ -142,6 +142,43 @@ describe('syncAllAddressBooksOnStartup', () => {
         req.action === 'PUBLISH_QDN_RESOURCE' && req.identifier === STORAGE_KEY
     );
 
+  it('includes XMR contacts in encrypted startup reads without publishing', async () => {
+    await syncAllAddressBooksOnStartup('TestUser');
+    expect(mockQortalRequest).toHaveBeenCalledWith({
+      action: 'FETCH_QDN_RESOURCE',
+      identifier: 'q-wallets-addressbook-XMR',
+      service: 'DOCUMENT_PRIVATE',
+      name: 'TestUser',
+      encoding: 'base64',
+    });
+    expect(
+      mockQortalRequest.mock.calls.some(
+        ([request]) => request.action === 'PUBLISH_QDN_RESOURCE'
+      )
+    ).toBe(false);
+  });
+
+  it('encrypts XMR contacts only on an explicit publication request', async () => {
+    const entry: AddressBookEntry = {
+      ...ENTRY_ALICE,
+      coinType: 'XMR',
+      address: '5' + 'a'.repeat(94),
+    };
+    const publishedAt = await publishToQDN('XMR', [entry], 'TestUser');
+    expect(publishedAt).toEqual(expect.any(Number));
+    expect(mockQortalRequest).toHaveBeenCalledWith({
+      action: 'ENCRYPT_DATA',
+      base64: 'mock-base64',
+    });
+    expect(mockQortalRequest).toHaveBeenCalledWith({
+      action: 'PUBLISH_QDN_RESOURCE',
+      base64: 'mock-encrypted-publish-data',
+      name: 'TestUser',
+      service: 'DOCUMENT_PRIVATE',
+      identifier: 'q-wallets-addressbook-XMR',
+    });
+  });
+
   describe('publishToQDN', () => {
     it('publishes only when explicitly called', async () => {
       const publishedAt = await publishToQDN('QORT', [ENTRY_ALICE], 'TestUser');

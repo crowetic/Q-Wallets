@@ -1,5 +1,4 @@
-import { Coin } from 'qapp-core';
-import { AddressBookEntry } from './Types';
+import { AddressBookCoin, AddressBookEntry } from './Types';
 import {
   ADDRESSBOOK_NAME_LENGTH,
   ADDRESSBOOK_NOTE_LENGTH,
@@ -33,10 +32,15 @@ export const setAddressBookAccountScope = (accountId?: string | null): void => {
 export const getAddressBookAccountScope = (): string | null =>
   addressBookAccountScope;
 
-const getLegacyScopedKey = (prefix: string, coinType: Coin | string): string =>
-  `${prefix}-${coinType}`;
+const getLegacyScopedKey = (
+  prefix: string,
+  coinType: AddressBookCoin | string
+): string => `${prefix}-${coinType}`;
 
-const getScopedKey = (prefix: string, coinType: Coin | string): string =>
+const getScopedKey = (
+  prefix: string,
+  coinType: AddressBookCoin | string
+): string =>
   addressBookAccountScope
     ? `${prefix}-${addressBookAccountScope}-${coinType}`
     : getLegacyScopedKey(prefix, coinType);
@@ -44,24 +48,26 @@ const getScopedKey = (prefix: string, coinType: Coin | string): string =>
 /**
  * Get the localStorage key for a specific coin type
  */
-export const getAddressBookStorageKey = (coinType: Coin | string): string => {
+export const getAddressBookStorageKey = (
+  coinType: AddressBookCoin | string
+): string => {
   return getScopedKey(STORAGE_KEY_PREFIX, coinType);
 };
 
 export const getAddressBookSyncRequiredKey = (
-  coinType: Coin | string
+  coinType: AddressBookCoin | string
 ): string => {
   return getScopedKey(SYNC_REQUIRED_KEY_PREFIX, coinType);
 };
 
 export const getAddressBookSyncBaselineKey = (
-  coinType: Coin | string
+  coinType: AddressBookCoin | string
 ): string => {
   return getScopedKey(SYNC_BASELINE_KEY_PREFIX, coinType);
 };
 
 export const getAddressBookPublishedHashKey = (
-  coinType: Coin | string
+  coinType: AddressBookCoin | string
 ): string => {
   return getScopedKey(PUBLISHED_HASH_KEY_PREFIX, coinType);
 };
@@ -80,7 +86,9 @@ const migrateLegacyKeyToCurrentScope = (
   localStorage.removeItem(legacyKey);
 };
 
-const migrateLegacyAddressBookKeys = (coinType: Coin | string): void => {
+const migrateLegacyAddressBookKeys = (
+  coinType: AddressBookCoin | string
+): void => {
   migrateLegacyKeyToCurrentScope(
     getLegacyScopedKey(STORAGE_KEY_PREFIX, coinType),
     getAddressBookStorageKey(coinType)
@@ -155,7 +163,7 @@ export const createAddressBookSyncSignature = (
   );
 
 export const saveAddressBookSnapshot = (
-  coinType: Coin | string,
+  coinType: AddressBookCoin | string,
   entries: AddressBookEntry[],
   lastUpdated: number
 ) => {
@@ -170,7 +178,7 @@ export const saveAddressBookSnapshot = (
 };
 
 const saveAddressBookEntries = (
-  coinType: Coin,
+  coinType: AddressBookCoin,
   entries: AddressBookEntry[]
 ) => {
   saveAddressBookSnapshot(coinType, entries, Date.now());
@@ -181,7 +189,9 @@ const saveAddressBookEntries = (
  * Returns addresses sorted by favorite state, manual order, then name
  * Handles both old format (array) and new format (object with metadata)
  */
-export const getAddressBook = (coinType: Coin): AddressBookEntry[] => {
+export const getAddressBook = (
+  coinType: AddressBookCoin
+): AddressBookEntry[] => {
   try {
     migrateLegacyAddressBookKeys(coinType);
     const key = getAddressBookStorageKey(coinType);
@@ -284,7 +294,7 @@ export const addAddress = (
  */
 export const updateAddress = (
   id: string,
-  coinType: Coin,
+  coinType: AddressBookCoin,
   updates: Partial<Omit<AddressBookEntry, 'id' | 'createdAt' | 'coinType'>>
 ): AddressBookEntry | null => {
   try {
@@ -341,7 +351,10 @@ export const updateAddress = (
  * Returns true if deleted, false if not found
  * Stores with metadata. QDN publishing is user-initiated.
  */
-export const deleteAddress = (id: string, coinType: Coin): boolean => {
+export const deleteAddress = (
+  id: string,
+  coinType: AddressBookCoin
+): boolean => {
   try {
     // Get existing addresses
     const addresses = getAddressBook(coinType);
@@ -375,7 +388,7 @@ export const deleteAddress = (id: string, coinType: Coin): boolean => {
  * Returns filtered and sorted results
  */
 export const searchAddresses = (
-  coinType: Coin,
+  coinType: AddressBookCoin,
   query: string
 ): AddressBookEntry[] => {
   try {
@@ -404,7 +417,7 @@ export const searchAddresses = (
 
 export const toggleAddressBookFavorite = (
   id: string,
-  coinType: Coin
+  coinType: AddressBookCoin
 ): AddressBookEntry[] | null => {
   try {
     const addresses = getAddressBook(coinType);
@@ -435,7 +448,7 @@ export const toggleAddressBookFavorite = (
 };
 
 export const moveAddressBookEntry = (
-  coinType: Coin,
+  coinType: AddressBookCoin,
   sourceId: string,
   targetId: string
 ): AddressBookEntry[] | null => {

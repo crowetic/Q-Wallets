@@ -237,7 +237,7 @@
     "qort_address_or_name": "QORT address or name",
     "receiver_address_or_name": "Receiver address or name",
     "max_sendable_loading": "Max sendable loading",
-    "symbol_amount": "{{symbol}} amount",
+    "symbol_amount": "Amount ({{symbol}})",
     "network_fee": "Network fee",
     "network_fee_max_tooltip": "Network fee deducted from the maximum sendable amount",
     "current_network_fee_tooltip": "Current network sending fee. This amount is reserved from the maximum sendable balance.",
@@ -345,6 +345,16 @@
     "copy_faucet": "Copy faucet link",
     "faucet_copied": "Faucet link copied. Paste it into your browser.",
     "faucet_help": "Copy the faucet link and paste it into your browser to get stagenet test coins.",
-    "copy_failed": "Could not copy the link. Select the URL and copy it manually."
+    "copy_failed": "Could not copy the link. Select the URL and copy it manually.",
+    "invalid_recipient": "Enter a 95-character stagenet address or subaddress. Hub checks its checksum before sending.",
+    "invalid_amount": "Enter an amount greater than zero with at most 12 decimal places (for example, 0.05).",
+    "invalid_fee": "Enter a fee limit greater than zero and no more than 1 XMR, with at most 12 decimal places.",
+    "insufficient_unlocked": "Amount plus the fee limit exceeds the unlocked balance.",
+    "hash_copy_failed": "Could not copy the transaction hash. Select it and copy it manually.",
+    "hash_copied": "Transaction hash copied",
+    "confirmations": "Confirmations",
+    "received": "Received",
+    "sent_label": "Sent",
+    "unconfirmed": "Unconfirmed"
   }
 }

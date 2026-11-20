@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  validateAddress,
   validateBtcAddress,
   validateDgbAddress,
   validateDogeAddress,
@@ -9,6 +10,13 @@ import {
 } from '../addressValidation';
 
 describe('addressValidation', () => {
+  it('checks XMR contact format while leaving checksum/network verification to Hub', () => {
+    expect(validateAddress('XMR', ` 5${'a'.repeat(94)} `)).toBe(true);
+    expect(validateAddress('XMR', `7${'a'.repeat(94)}`)).toBe(true);
+    expect(validateAddress('XMR', '5' + 'a'.repeat(105))).toBe(false);
+    expect(validateAddress('XMR', '5' + '0'.repeat(94))).toBe(false);
+    expect(validateAddress('XMR', '')).toBe(false);
+  });
   describe('validateLtcAddress', () => {
     describe('valid addresses', () => {
       it('should accept P2PKH addresses starting with L', () => {

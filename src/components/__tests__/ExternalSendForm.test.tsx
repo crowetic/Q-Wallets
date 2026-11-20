@@ -43,7 +43,9 @@ describe('Send Max form', () => {
   it('keeps tracking Max across programmatic input updates, then respects a manual edit', async () => {
     const user = userEvent.setup();
     render(<SendForm />);
-    const amount = screen.getByRole('textbox', { name: 'BTC amount' });
+    const amount = screen.getByRole('textbox', {
+      name: 'core:send.symbol_amount',
+    });
     await user.click(
       screen.getByRole('button', { name: 'core:action.send_max' })
     );

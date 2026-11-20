@@ -31,7 +31,11 @@ Hub engine still refuses mainnet scans/spending.
 4. Send a small amount to a second private stagenet wallet. Amount and maximum
    fee are decimal strings (up to 12 places). Hub checks the full address checksum
    and asks for approval before local signing. Standard addresses/subaddresses
-   are supported; integrated addresses, memo, payment IDs and send-max are not.
+   are supported. The Send button opens Hub approval. Fractional input such as
+   `.05` is normalized to `0.05` without floating-point conversion. Send Max
+   reserves the entire fee limit from unlocked funds and follows fee/balance
+   changes until you edit the amount. Integrated addresses, memo and payment IDs
+   are not supported.
    Check history and the receiving wallet's balance.
 5. Close/reopen and compare address, balance and history. In a fresh Hub profile,
    restore only the ordinary Qortal backup and scan from 0 to recover prior funds.
@@ -49,5 +53,20 @@ may be exposed to this Q-App.
 Rollback: republish your retained previous ZIP under the same testing name and
 retain the prior Core JAR/settings and Hub AppImage. Preserve Hub's encrypted
 cache/pending journal if a payment is unresolved; older wallets cannot safely
-replace an uncertain payment. This release does not enable QORT/XMR swaps. Their
+replace an uncertain payment. This release does not enable QORT/XMR cross-chain trades. Their
 protocol, recovery proof and coordinated AT approval are a separate milestone.
+
+Testing build **1.4.0-xmr.3** adds the shared Send dialog and XMR address book.
+The summary's available balance is the unlocked balance; total balance and scan
+progress remain visible. Errors identify the affected field inside the dialog.
+History includes exact amounts/fees, confirmations, dates, pagination and hash
+copying. The previously delivered matching Hub and Core can handle these standard
+`SEND_COIN` requests; no new Hub/native engine or Core JAR is required for this
+Q-App change.
+
+For the send regression, enter `.05` and fee limit `0.001` with at least `0.051`
+unlocked stagenet XMR. Expect a Hub approval showing `0.05` XMR and the correct
+recipient. Also test a declined approval, a 13-decimal amount, insufficient
+unlocked balance, Send Max after fee changes, and an unresolved pending payment.
+Confirm any approved payment in both wallets. The automated tests mock the Hub
+bridge and do not sign or broadcast a payment.

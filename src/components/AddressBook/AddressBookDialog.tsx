@@ -18,7 +18,7 @@ import type { Theme } from '@mui/material/styles';
 import { Coin } from 'qapp-core';
 import { useTranslation } from 'react-i18next';
 import { Transition } from '../../styles/page-styles';
-import { AddressBookEntry } from '../../utils/Types';
+import { AddressBookCoin, AddressBookEntry } from '../../utils/Types';
 import {
   getAddressBook,
   searchAddresses,
@@ -42,8 +42,9 @@ import coinLogoDOGE from '../../assets/doge.png';
 import coinLogoLTC from '../../assets/ltc.png';
 import coinLogoQORT from '../../assets/qort.png';
 import coinLogoRVN from '../../assets/rvn.png';
+import coinLogoXMR from '../../assets/wallet-renders/xmr-coin-render.svg';
 
-const coinLogos: Partial<Record<Coin, string>> = {
+const coinLogos: Partial<Record<AddressBookCoin, string>> = {
   [Coin.ARRR]: coinLogoARRR,
   [Coin.BTC]: coinLogoBTC,
   [Coin.DGB]: coinLogoDGB,
@@ -51,12 +52,13 @@ const coinLogos: Partial<Record<Coin, string>> = {
   [Coin.LTC]: coinLogoLTC,
   [Coin.QORT]: coinLogoQORT,
   [Coin.RVN]: coinLogoRVN,
+  XMR: coinLogoXMR,
 };
 
 interface AddressBookDialogProps {
   open: boolean;
   onClose: () => void;
-  coinType: Coin;
+  coinType: AddressBookCoin;
   onSelectAddress?: (address: string, name: string) => void;
   onAddressBookChange?: () => void;
   prefillData?: { name: string; address: string } | null;

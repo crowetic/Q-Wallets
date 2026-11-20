@@ -68,7 +68,7 @@ vi.mock('../../components/ExternalSendForm', () => ({
       <input
         aria-label="amount"
         value={props.amount}
-        onChange={(event) => props.onAmountChange(Number(event.target.value))}
+        onChange={(event) => props.onAmountChange?.(Number(event.target.value))}
       />
       {props.feeContent}
       <button onClick={props.onSendMax}>Max</button>

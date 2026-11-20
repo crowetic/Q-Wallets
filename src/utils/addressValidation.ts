@@ -1,5 +1,6 @@
 import { Coin } from 'qapp-core';
 import { EMPTY_STRING } from '../common/constants';
+import type { AddressBookCoin } from './Types';
 import { validateArrrRecipientWithCore } from './qortalNodeApi';
 
 /**
@@ -76,12 +77,18 @@ export const validateQortAddress = (address: string): boolean => {
  * Validate address based on coin type
  * Factory function that routes to the appropriate validator
  */
-export const validateAddress = (coinType: Coin, address: string): boolean => {
+export const validateAddress = (
+  coinType: AddressBookCoin,
+  address: string
+): boolean => {
   if (!address || address.trim() === EMPTY_STRING) {
     return false;
   }
 
   switch (coinType) {
+    case 'XMR':
+      // Format only. Hub verifies the checksum and selected network before sending.
+      return /^[1-9A-HJ-NP-Za-km-z]{95}$/.test(address.trim());
     case Coin.BTC:
       return validateBtcAddress(address);
     case Coin.DOGE:

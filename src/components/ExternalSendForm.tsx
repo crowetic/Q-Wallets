@@ -4,6 +4,7 @@ import type {
   ComponentType,
   FC,
   ReactNode,
+  ReactElement,
 } from 'react';
 import {
   AppBar,
@@ -44,15 +45,14 @@ type ExternalSendFormProps = {
   addressHelperText: ReactNode;
   addressValidationPending?: boolean;
   addressInputId: string;
-  amount: number;
   afterRecipientContent?: ReactNode;
   balance: number | string | null | undefined;
   balanceError?: string | null;
   coinLogo: string;
   feeContent: ReactNode;
   isBalanceLoading: boolean;
-  maxSendable: number;
-  onAmountChange: (amount: number) => void;
+  isSubmitting?: boolean;
+  sendMaxDisabled?: boolean;
   onClearRecipient?: () => void;
   onClose: () => void;
   onOpenAddressBook?: () => void;
@@ -69,7 +69,20 @@ type ExternalSendFormProps = {
   showAddressBookButton?: boolean;
   showBalanceMeter?: boolean;
   symbol: string;
-};
+} & (
+  | {
+      amount: number;
+      maxSendable: number;
+      onAmountChange: (amount: number) => void;
+      amountContent?: never;
+    }
+  | {
+      amountContent: ReactElement;
+      maxSendable: string;
+      amount?: never;
+      onAmountChange?: never;
+    }
+);
 
 type ExternalFeeSliderProps = {
   defaultValue: number;
@@ -168,6 +181,36 @@ const fieldSx = {
   },
 } as const;
 
+const amountFieldSx = {
+  ...fieldSx,
+  '& .MuiOutlinedInput-root': {
+    ...fieldSx['& .MuiOutlinedInput-root'],
+    bgcolor: 'rgba(0,8,16,0.2)',
+    borderRadius: 1.55,
+    minHeight: { xs: 54, sm: 56 },
+    px: { xs: 1.45, sm: 1.6 },
+    '& fieldset': {
+      borderColor: 'rgba(24,158,255,0.9)',
+      boxShadow: '0 0 18px rgba(24,158,255,0.18)',
+    },
+    '&:hover fieldset': {
+      borderColor: 'rgba(24,174,255,0.96)',
+    },
+  },
+  '& .MuiOutlinedInput-input': {
+    color: 'text.primary',
+    fontSize: { xs: 23, sm: 24 },
+    fontWeight: 400,
+    py: 0,
+    textAlign: 'left',
+    '&::placeholder': {
+      color: 'text.secondary',
+      fontWeight: 400,
+      opacity: 0.86,
+    },
+  },
+} as const;
+
 const infoIconSx = {
   color: 'text.secondary',
   fontSize: { xs: 14.5, sm: 15 },
@@ -180,10 +223,13 @@ export function ExternalSendForm({
   addressValidationPending = false,
   addressInputId,
   afterRecipientContent,
-  amount,
+  amount = 0,
+  amountContent,
   coinLogo,
   feeContent,
+  isSubmitting = false,
   maxSendable,
+  sendMaxDisabled = false,
   onAmountChange,
   onClearRecipient,
   onClose,
@@ -202,7 +248,8 @@ export function ExternalSendForm({
   const { t } = useTranslation(['core']);
   const displayRecipientSubtitle =
     recipientSubtitle ?? t('core:address_book_ui.contact');
-  const safeMax = maxOrZero(maxSendable);
+  const safeMax = typeof maxSendable === 'number' ? maxOrZero(maxSendable) : 0;
+  const displayMax = typeof maxSendable === 'string' ? maxSendable : safeMax;
   const recipientInitials =
     recipientDisplayName
       .split(' ')
@@ -237,7 +284,9 @@ export function ExternalSendForm({
           <IconButton
             color="inherit"
             onClick={onClose}
-            aria-label="close"
+            aria-label={t('core:action.close', {
+              postProcess: 'capitalizeFirstChar',
+            })}
             sx={{
               color: 'text.secondary',
               mr: { xs: 1.25, sm: 1.45 },
@@ -259,7 +308,7 @@ export function ExternalSendForm({
               mr: { xs: 1.65, sm: 1.8 },
               width: { xs: 34, sm: 36 },
             }}
-            alt={`${symbol} Logo`}
+            alt={symbol}
             src={coinLogo}
           />
           <Typography
@@ -281,7 +330,6 @@ export function ExternalSendForm({
             disabled={sendDisabled}
             variant="contained"
             startIcon={<NorthEast />}
-            aria-label={`send-${symbol.toLowerCase()}`}
             onClick={onSend}
             sx={{
               bgcolor: '#0a9eff',
@@ -390,6 +438,7 @@ export function ExternalSendForm({
                 {onClearRecipient ? (
                   <IconButton
                     aria-label={t('core:action.clear_recipient')}
+                    disabled={isSubmitting}
                     onClick={onClearRecipient}
                     sx={{
                       color: 'text.secondary',
@@ -408,6 +457,7 @@ export function ExternalSendForm({
                 {showAddressBookButton && onOpenAddressBook ? (
                   <IconButton
                     aria-label={t('core:action.open_address_book')}
+                    disabled={isSubmitting}
                     onClick={onOpenAddressBook}
                     sx={{
                       border: '1px solid rgba(116,158,180,0.12)',
@@ -465,6 +515,7 @@ export function ExternalSendForm({
             <TextField
               required
               id={addressInputId}
+              disabled={isSubmitting}
               value={recipient}
               onChange={onRecipientChange}
               error={addressError}
@@ -495,6 +546,7 @@ export function ExternalSendForm({
                         <Tooltip title={t('core:action.open_address_book')}>
                           <IconButton
                             aria-label={t('core:action.open_address_book')}
+                            disabled={isSubmitting}
                             onClick={onOpenAddressBook}
                             sx={{
                               border: '1px solid rgba(116,158,180,0.12)',
@@ -570,7 +622,7 @@ export function ExternalSendForm({
                     }}
                   >
                     {t('core:send.max_sendable', {
-                      amount: safeMax,
+                      amount: displayMax,
                       symbol,
                     })}
                   </Typography>
@@ -579,6 +631,7 @@ export function ExternalSendForm({
               <Button
                 variant="text"
                 onClick={onSendMax}
+                disabled={sendMaxDisabled}
                 sx={{
                   color: 'primary.main',
                   fontSize: { xs: 13.8, sm: 14.2 },
@@ -600,77 +653,51 @@ export function ExternalSendForm({
               </Button>
             </Box>
           </Box>
-          <NumericFormat
-            decimalScale={8}
-            defaultValue={0}
-            value={amount === 0 ? '' : amount}
-            allowNegative={false}
-            customInput={TextField as ComponentType<any>}
-            valueIsNumericString
-            placeholder="0.00"
-            fullWidth
-            isAllowed={(values) => {
-              const { formattedValue, floatValue } = values;
-              return formattedValue === '' || (floatValue ?? 0) <= safeMax;
-            }}
-            onValueChange={(values, sourceInfo) => {
-              if (sourceInfo.source === 'event') {
-                onAmountChange(values.floatValue ?? 0);
-              }
-            }}
-            required
-            slotProps={{
-              htmlInput: {
-                'aria-label': `${symbol} amount`,
-              },
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <Typography
-                      sx={{
-                        color: 'text.secondary',
-                        fontSize: { xs: 14.5, sm: 15 },
-                        fontWeight: 700,
-                        letterSpacing: 0,
-                        lineHeight: 1,
-                      }}
-                    >
-                      {symbol}
-                    </Typography>
-                  </InputAdornment>
-                ),
-              },
-            }}
-            sx={{
-              ...fieldSx,
-              '& .MuiOutlinedInput-root': {
-                ...fieldSx['& .MuiOutlinedInput-root'],
-                bgcolor: 'rgba(0,8,16,0.2)',
-                borderRadius: 1.55,
-                minHeight: { xs: 54, sm: 56 },
-                px: { xs: 1.45, sm: 1.6 },
-                '& fieldset': {
-                  borderColor: 'rgba(24,158,255,0.9)',
-                  boxShadow: '0 0 18px rgba(24,158,255,0.18)',
+          {amountContent ?? (
+            <NumericFormat
+              decimalScale={8}
+              defaultValue={0}
+              value={amount === 0 ? '' : amount}
+              allowNegative={false}
+              customInput={TextField as ComponentType<any>}
+              valueIsNumericString
+              placeholder="0.00"
+              fullWidth
+              isAllowed={(values) => {
+                const { formattedValue, floatValue } = values;
+                return formattedValue === '' || (floatValue ?? 0) <= safeMax;
+              }}
+              onValueChange={(values, sourceInfo) => {
+                if (sourceInfo.source === 'event') {
+                  onAmountChange?.(values.floatValue ?? 0);
+                }
+              }}
+              required
+              slotProps={{
+                htmlInput: {
+                  'aria-label': t('core:send.symbol_amount', { symbol }),
                 },
-                '&:hover fieldset': {
-                  borderColor: 'rgba(24,174,255,0.96)',
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Typography
+                        sx={{
+                          color: 'text.secondary',
+                          fontSize: { xs: 14.5, sm: 15 },
+                          fontWeight: 700,
+                          letterSpacing: 0,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {symbol}
+                      </Typography>
+                    </InputAdornment>
+                  ),
                 },
-              },
-              '& .MuiOutlinedInput-input': {
-                color: 'text.primary',
-                fontSize: { xs: 23, sm: 24 },
-                fontWeight: 400,
-                py: 0,
-                textAlign: 'left',
-                '&::placeholder': {
-                  color: 'text.secondary',
-                  fontWeight: 400,
-                  opacity: 0.86,
-                },
-              },
-            }}
-          />
+              }}
+              sx={amountFieldSx}
+            />
+          )}
         </Box>
 
         {feeContent}
@@ -859,5 +886,45 @@ export function ExternalFeeSlider({
         </Tooltip>
       </Box>
     </>
+  );
+}
+
+/** An editable decimal string: preserve precision and reject invalid input at submit. */
+export function ExactSendAmountInput({
+  value,
+  onChange,
+  label,
+  symbol,
+  disabled,
+  error,
+  helperText,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  symbol: string;
+  disabled: boolean;
+  error: boolean;
+  helperText?: string;
+}) {
+  return (
+    <TextField
+      fullWidth
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      disabled={disabled}
+      error={error}
+      helperText={helperText}
+      placeholder="0.00"
+      slotProps={{
+        htmlInput: { 'aria-label': label, inputMode: 'decimal' },
+        input: {
+          endAdornment: (
+            <InputAdornment position="end">{symbol}</InputAdornment>
+          ),
+        },
+      }}
+      sx={amountFieldSx}
+    />
   );
 }

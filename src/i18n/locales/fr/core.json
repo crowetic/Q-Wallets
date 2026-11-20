@@ -237,7 +237,7 @@
     "qort_address_or_name": "Adresse QORT ou nom",
     "receiver_address_or_name": "Adresse ou nom du destinataire",
     "max_sendable_loading": "Montant maximal envoyable en chargement",
-    "symbol_amount": "Montant {{symbol}}",
+    "symbol_amount": "Montant ({{symbol}})",
     "network_fee": "Frais reseau",
     "network_fee_max_tooltip": "Frais reseau deduits du montant maximal envoyable",
     "current_network_fee_tooltip": "Frais reseau actuels pour l'envoi. Ce montant est reserve sur le solde maximal envoyable.",
@@ -345,6 +345,16 @@
     "copy_faucet": "Copier le lien du faucet",
     "faucet_copied": "Lien du faucet copié. Collez-le dans votre navigateur.",
     "faucet_help": "Copiez le lien du faucet et collez-le dans votre navigateur pour obtenir des pièces de test stagenet.",
-    "copy_failed": "Impossible de copier le lien. Sélectionnez l’URL et copiez-la manuellement."
+    "copy_failed": "Impossible de copier le lien. Sélectionnez l’URL et copiez-la manuellement.",
+    "invalid_recipient": "Saisissez une adresse ou sous-adresse stagenet de 95 caractères. Hub vérifie sa somme de contrôle avant l’envoi.",
+    "invalid_amount": "Saisissez un montant supérieur à zéro avec au plus 12 décimales (par exemple, 0.05).",
+    "invalid_fee": "Saisissez un plafond de frais supérieur à zéro et inférieur ou égal à 1 XMR, avec au plus 12 décimales.",
+    "insufficient_unlocked": "Le montant et le plafond de frais dépassent le solde déverrouillé.",
+    "hash_copy_failed": "Impossible de copier le hash de transaction. Sélectionnez-le et copiez-le manuellement.",
+    "hash_copied": "Hash de transaction copié",
+    "confirmations": "Confirmations",
+    "received": "Reçu",
+    "sent_label": "Envoyé",
+    "unconfirmed": "Non confirmée"
   }
 }

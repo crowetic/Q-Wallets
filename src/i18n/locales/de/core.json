@@ -237,7 +237,7 @@
     "qort_address_or_name": "QORT-Adresse oder Name",
     "receiver_address_or_name": "Empfaengeradresse oder Name",
     "max_sendable_loading": "Maximal sendbarer Betrag wird geladen",
-    "symbol_amount": "{{symbol}}-Betrag",
+    "symbol_amount": "Betrag ({{symbol}})",
     "network_fee": "Netzwerkgebuehr",
     "network_fee_max_tooltip": "Netzwerkgebuehr, die vom maximal sendbaren Betrag abgezogen wird",
     "current_network_fee_tooltip": "Aktuelle Netzwerk-Sendegebuehr. Dieser Betrag wird vom maximal sendbaren Guthaben reserviert.",
@@ -345,6 +345,16 @@
     "copy_faucet": "Faucet-Link kopieren",
     "faucet_copied": "Faucet-Link kopiert. Fügen Sie ihn in Ihren Browser ein.",
     "faucet_help": "Kopieren Sie den Faucet-Link und fügen Sie ihn in Ihren Browser ein, um Stagenet-Testcoins zu erhalten.",
-    "copy_failed": "Der Link konnte nicht kopiert werden. Markieren Sie die URL und kopieren Sie sie manuell."
+    "copy_failed": "Der Link konnte nicht kopiert werden. Markieren Sie die URL und kopieren Sie sie manuell.",
+    "invalid_recipient": "Gib eine Stagenet-Adresse oder Unteradresse mit 95 Zeichen ein. Hub prüft vor dem Senden die Prüfsumme.",
+    "invalid_amount": "Gib einen Betrag größer als null mit höchstens 12 Nachkommastellen ein (zum Beispiel 0.05).",
+    "invalid_fee": "Gib ein Gebührenlimit größer als null und höchstens 1 XMR mit maximal 12 Nachkommastellen ein.",
+    "insufficient_unlocked": "Betrag und Gebührenlimit übersteigen das freigegebene Guthaben.",
+    "hash_copy_failed": "Der Transaktionshash konnte nicht kopiert werden. Markiere ihn und kopiere ihn manuell.",
+    "hash_copied": "Transaktionshash kopiert",
+    "confirmations": "Bestätigungen",
+    "received": "Empfangen",
+    "sent_label": "Gesendet",
+    "unconfirmed": "Unbestätigt"
   }
 }

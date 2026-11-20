@@ -237,7 +237,7 @@
     "qort_address_or_name": "Direccion QORT o nombre",
     "receiver_address_or_name": "Direccion o nombre del receptor",
     "max_sendable_loading": "Cargando maximo enviable",
-    "symbol_amount": "Importe de {{symbol}}",
+    "symbol_amount": "Importe ({{symbol}})",
     "network_fee": "Comision de red",
     "network_fee_max_tooltip": "Comision de red deducida del importe maximo enviable",
     "current_network_fee_tooltip": "Comision actual de envio de la red. Este importe se reserva del saldo maximo enviable.",
@@ -345,6 +345,16 @@
     "copy_faucet": "Copiar enlace del faucet",
     "faucet_copied": "Enlace del faucet copiado. Pégalo en tu navegador.",
     "faucet_help": "Copia el enlace del faucet y pégalo en tu navegador para obtener monedas de prueba de stagenet.",
-    "copy_failed": "No se pudo copiar el enlace. Selecciona la URL y cópiala manualmente."
+    "copy_failed": "No se pudo copiar el enlace. Selecciona la URL y cópiala manualmente.",
+    "invalid_recipient": "Introduce una dirección o subdirección de stagenet de 95 caracteres. Hub verifica su suma de comprobación antes de enviar.",
+    "invalid_amount": "Introduce un importe mayor que cero con un máximo de 12 decimales (por ejemplo, 0.05).",
+    "invalid_fee": "Introduce un límite de comisión mayor que cero y de hasta 1 XMR, con un máximo de 12 decimales.",
+    "insufficient_unlocked": "El importe más el límite de comisión supera el saldo desbloqueado.",
+    "hash_copy_failed": "No se pudo copiar el hash de la transacción. Selecciónalo y cópialo manualmente.",
+    "hash_copied": "Hash de la transacción copiado",
+    "confirmations": "Confirmaciones",
+    "received": "Recibido",
+    "sent_label": "Enviado",
+    "unconfirmed": "Sin confirmar"
   }
 }

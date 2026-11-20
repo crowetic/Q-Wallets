@@ -57,6 +57,61 @@ export const decimalAmount = (value: string): string => {
     .replace(/0+$/, '');
   return (amount / unit).toString() + (fraction ? '.' + fraction : '');
 };
+
+// Normalize human input at the UI boundary; the Hub still receives strict decimal
+// strings. Never pass through Number/parseFloat or round extra decimal places.
+export const paymentAmount = (value: string): string => {
+  const input = value.trim();
+  return decimalAmount(
+    atomicAmount(input.startsWith('.') ? `0${input}` : input).toString()
+  );
+};
+
+export const maxPaymentAmount = (unlocked: string, maxFee: string): string => {
+  try {
+    const fee = atomicAmount(paymentAmount(maxFee));
+    if (fee > unit) return '0';
+    decimalAmount(unlocked);
+    const available = BigInt(unlocked) - fee;
+    return available > 0n ? decimalAmount(available.toString()) : '0';
+  } catch {
+    return '0';
+  }
+};
+
+export type PaymentErrors = Partial<
+  Record<'recipient' | 'amount' | 'maxFee', string>
+>;
+
+export const validatePayment = (
+  input: { recipient: string; amount: string; maxFee: string },
+  unlocked: string
+) => {
+  const errors: PaymentErrors = {};
+  const recipient = input.recipient.trim();
+  let amount = '';
+  let maxFee = '';
+  if (!/^[1-9A-HJ-NP-Za-km-z]{95}$/.test(recipient))
+    errors.recipient = 'core:xmr.invalid_recipient';
+  try {
+    amount = paymentAmount(input.amount);
+  } catch {
+    errors.amount = 'core:xmr.invalid_amount';
+  }
+  try {
+    maxFee = paymentAmount(input.maxFee);
+    if (atomicAmount(maxFee) > unit) throw new Error('invalid');
+  } catch {
+    errors.maxFee = 'core:xmr.invalid_fee';
+  }
+  if (
+    !errors.amount &&
+    !errors.maxFee &&
+    atomicAmount(amount) + atomicAmount(maxFee) > BigInt(unlocked)
+  )
+    errors.amount = 'core:xmr.insufficient_unlocked';
+  return { errors, payment: { recipient, amount, maxFee } };
+};
 export const checkedReply = <T>(reply: T): T => {
   if (
     reply &&
@@ -112,7 +167,11 @@ export const walletStatus = (reply: unknown, address: string): XmrStatus => {
       !/^[a-f0-9]{64}$/.test(tx.txId) ||
       typeof tx.incoming !== 'boolean' ||
       !Number.isSafeInteger(tx.confirmations) ||
-      tx.confirmations < 0
+      tx.confirmations < 0 ||
+      (tx.timestamp !== null &&
+        (!Number.isSafeInteger(tx.timestamp) ||
+          tx.timestamp < 0 ||
+          tx.timestamp > 8640000000000))
     )
       throw new Error('XMR');
     decimalAmount(tx.amountAtomic);

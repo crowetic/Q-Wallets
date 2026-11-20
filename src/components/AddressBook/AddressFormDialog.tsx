@@ -25,7 +25,7 @@ import {
   FAST_DIALOG_TRANSITION_MS,
   Transition,
 } from '../../styles/page-styles';
-import { AddressBookEntry } from '../../utils/Types';
+import { AddressBookCoin, AddressBookEntry } from '../../utils/Types';
 import { getAddressBook } from '../../utils/addressBookStorage';
 import { validateAddress } from '../../utils/addressValidation';
 import {
@@ -46,6 +46,7 @@ import coinLogoDOGE from '../../assets/doge.png';
 import coinLogoLTC from '../../assets/ltc.png';
 import coinLogoQORT from '../../assets/qort.png';
 import coinLogoRVN from '../../assets/rvn.png';
+import coinLogoXMR from '../../assets/wallet-renders/xmr-coin-render.svg';
 import { useArrrAddressValidation } from '../../hooks/useArrrAddressValidation';
 
 const ADDRESS_LOOKUP_DEBOUNCE_MS = 350;
@@ -57,7 +58,7 @@ type QortResolvedContact = {
   name: string;
 };
 
-const coinLogos: Partial<Record<Coin, string>> = {
+const coinLogos: Partial<Record<AddressBookCoin, string>> = {
   [Coin.ARRR]: coinLogoARRR,
   [Coin.BTC]: coinLogoBTC,
   [Coin.DGB]: coinLogoDGB,
@@ -65,6 +66,7 @@ const coinLogos: Partial<Record<Coin, string>> = {
   [Coin.LTC]: coinLogoLTC,
   [Coin.QORT]: coinLogoQORT,
   [Coin.RVN]: coinLogoRVN,
+  XMR: coinLogoXMR,
 };
 
 const fieldLabelSx = {
@@ -125,7 +127,7 @@ const formFieldSx = {
 interface AddressFormDialogProps {
   open: boolean;
   onClose: () => void;
-  coinType: Coin;
+  coinType: AddressBookCoin;
   entry?: AddressBookEntry;
   onSave: (entry: Omit<AddressBookEntry, 'id' | 'createdAt'>) => void;
   onDelete?: (entry: AddressBookEntry) => void;

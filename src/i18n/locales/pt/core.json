@@ -238,7 +238,7 @@
     "qort_address_or_name": "Endereco QORT ou nome",
     "receiver_address_or_name": "Endereco ou nome do destinatario",
     "max_sendable_loading": "Carregando maximo enviavel",
-    "symbol_amount": "Valor em {{symbol}}",
+    "symbol_amount": "Montante ({{symbol}})",
     "network_fee": "Taxa de rede",
     "network_fee_max_tooltip": "Taxa de rede deduzida do valor maximo enviavel",
     "current_network_fee_tooltip": "Taxa atual de envio da rede. Este valor e reservado do saldo maximo enviavel.",
@@ -346,6 +346,16 @@
     "copy_faucet": "Copiar link do faucet",
     "faucet_copied": "Link do faucet copiado. Cole-o no navegador.",
     "faucet_help": "Copie o link do faucet e cole-o no navegador para obter moedas de teste stagenet.",
-    "copy_failed": "Não foi possível copiar o link. Selecione a URL e copie-a manualmente."
+    "copy_failed": "Não foi possível copiar o link. Selecione a URL e copie-a manualmente.",
+    "invalid_recipient": "Introduza um endereço ou subendereço stagenet com 95 caracteres. O Hub verifica a soma de verificação antes do envio.",
+    "invalid_amount": "Introduza um montante superior a zero com até 12 casas decimais (por exemplo, 0.05).",
+    "invalid_fee": "Introduza um limite de taxa superior a zero e não superior a 1 XMR, com até 12 casas decimais.",
+    "insufficient_unlocked": "O montante mais o limite de taxa excede o saldo desbloqueado.",
+    "hash_copy_failed": "Não foi possível copiar o hash da transação. Selecione-o e copie-o manualmente.",
+    "hash_copied": "Hash da transação copiado",
+    "confirmations": "Confirmações",
+    "received": "Recebido",
+    "sent_label": "Enviado",
+    "unconfirmed": "Não confirmada"
   }
 }

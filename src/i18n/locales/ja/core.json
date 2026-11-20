@@ -238,7 +238,7 @@
     "qort_address_or_name": "QORTアドレスまたは名前",
     "receiver_address_or_name": "受取人のアドレスまたは名前",
     "max_sendable_loading": "最大送金額を読み込み中",
-    "symbol_amount": "{{symbol}}金額",
+    "symbol_amount": "金額（{{symbol}}）",
     "network_fee": "ネットワーク手数料",
     "network_fee_max_tooltip": "最大送金額から差し引かれるネットワーク手数料",
     "current_network_fee_tooltip": "現在のネットワーク送信手数料。この金額は最大送金可能残高から予約されます。",
@@ -346,6 +346,16 @@
     "copy_faucet": "フォーセットのリンクをコピー",
     "faucet_copied": "フォーセットのリンクをコピーしました。ブラウザーに貼り付けてください。",
     "faucet_help": "フォーセットのリンクをコピーしてブラウザーに貼り付けると、stagenetのテストコインを入手できます。",
-    "copy_failed": "リンクをコピーできませんでした。URLを選択して手動でコピーしてください。"
+    "copy_failed": "リンクをコピーできませんでした。URLを選択して手動でコピーしてください。",
+    "invalid_recipient": "95文字のstagenetアドレスまたはサブアドレスを入力してください。Hubは送信前にチェックサムを確認します。",
+    "invalid_amount": "0より大きく、小数点以下12桁以内の金額を入力してください（例：0.05）。",
+    "invalid_fee": "0より大きく1 XMR以下で、小数点以下12桁以内の手数料上限を入力してください。",
+    "insufficient_unlocked": "金額と手数料上限の合計がロック解除済み残高を超えています。",
+    "hash_copy_failed": "トランザクションハッシュをコピーできませんでした。選択して手動でコピーしてください。",
+    "hash_copied": "トランザクションハッシュをコピーしました",
+    "confirmations": "承認数",
+    "received": "受取",
+    "sent_label": "送信",
+    "unconfirmed": "未承認"
   }
 }

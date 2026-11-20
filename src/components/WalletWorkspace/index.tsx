@@ -72,7 +72,7 @@ import {
   WalletButtons,
   WalletCard,
 } from '../../styles/page-styles';
-import { AddressBookEntry } from '../../utils/Types';
+import { AddressBookCoin, AddressBookEntry } from '../../utils/Types';
 import {
   ADDRESS_BOOK_STORAGE_EVENT,
   deleteAddress,
@@ -97,15 +97,16 @@ type AddressBookCoinSymbol =
   | 'DOGE'
   | 'DGB'
   | 'RVN'
-  | 'ARRR';
+  | 'ARRR'
+  | 'XMR';
 
-export type WalletCoinSymbol = AddressBookCoinSymbol | 'XMR';
+export type WalletCoinSymbol = AddressBookCoinSymbol;
 
 type WalletVisual = {
   accent: string;
   coinIcon: string;
   coinImage: string;
-  coinType: Coin;
+  coinType: AddressBookCoin;
   decimals: number;
   glow: string;
   glowSoft: string;
@@ -191,11 +192,8 @@ const WALLET_VISUALS: Record<AddressBookCoinSymbol, WalletVisual> = {
     name: 'Pirate Chain',
     symbol: 'ARRR',
   },
-};
-
-const WALLET_DISPLAY_VISUALS = {
-  ...WALLET_VISUALS,
   XMR: {
+    coinType: 'XMR',
     accent: '#f26822',
     coinIcon: xmrCoinRender,
     coinImage: xmrCoinRender,
@@ -288,7 +286,7 @@ const WALLET_BALANCE_DISPLAY_LIMIT = '999,999.99'.length;
 const formatWalletDisplayAmount = (
   value: unknown,
   symbol: WalletCoinSymbol,
-  decimals = WALLET_DISPLAY_VISUALS[symbol].decimals
+  decimals = WALLET_VISUALS[symbol].decimals
 ) => {
   if (value === null || value === undefined || value === '')
     return `0 ${symbol}`;
@@ -452,7 +450,7 @@ function ReceiveQrDialog({
   open,
 }: ReceiveQrDialogProps) {
   const { t } = useTranslation(['core']);
-  const visual = WALLET_DISPLAY_VISUALS[coin];
+  const visual = WALLET_VISUALS[coin];
   const value = address ?? '';
 
   return (
@@ -749,7 +747,7 @@ export function WalletSummaryCard({
   sendLabel,
 }: WalletSummaryCardProps) {
   const { t } = useTranslation(['core']);
-  const visual = WALLET_DISPLAY_VISUALS[coin];
+  const visual = WALLET_VISUALS[coin];
   const displayCopyAddressLabel =
     copyAddressLabel ??
     t('core:action.copy_address', { postProcess: 'capitalizeFirstChar' });
@@ -1198,7 +1196,7 @@ export function ReceiveQrPanel({
   onQrClick,
 }: ReceiveQrPanelProps) {
   const { t } = useTranslation(['core']);
-  const visual = WALLET_DISPLAY_VISUALS[coin];
+  const visual = WALLET_VISUALS[coin];
   const qrRef = useRef<HTMLDivElement | null>(null);
   const value = address ?? '';
 
@@ -3222,14 +3220,10 @@ type WalletWorkspaceProps = {
   receiveOpen: boolean;
   rightColumnAfter?: ReactNode;
   transactions: ReactNode;
-} & (
-  | {
-      coin: AddressBookCoinSymbol;
-      onAddContact: () => void;
-      onSelectAddress: (address: string, name: string) => void;
-    }
-  | { coin: 'XMR'; onAddContact?: never; onSelectAddress?: never }
-);
+  coin: AddressBookCoinSymbol;
+  onAddContact: () => void;
+  onSelectAddress: (address: string, name: string) => void;
+};
 
 export function WalletWorkspace({
   address,
@@ -3251,7 +3245,7 @@ export function WalletWorkspace({
   rightColumnAfter,
   transactions,
 }: WalletWorkspaceProps) {
-  const visual = WALLET_DISPLAY_VISUALS[coin];
+  const visual = WALLET_VISUALS[coin];
   const [receiveQrDialogOpen, setReceiveQrDialogOpen] = useState(false);
 
   // The wallet summary keeps its natural width; the Address book / Sync panels
@@ -3415,15 +3409,13 @@ export function WalletWorkspace({
             zIndex: 1,
           }}
         >
-          {coin !== 'XMR' && (
-            <WalletAddressBookPanel
-              coin={coin}
-              onAddContact={onAddContact}
-              onAddressBookChange={onAddressBookChange}
-              onSelectAddress={onSelectAddress}
-              refreshKey={addressBookRefreshKey}
-            />
-          )}
+          <WalletAddressBookPanel
+            coin={coin}
+            onAddContact={onAddContact}
+            onAddressBookChange={onAddressBookChange}
+            onSelectAddress={onSelectAddress}
+            refreshKey={addressBookRefreshKey}
+          />
           {rightColumnAfter ? (
             <Box sx={{ mt: { xs: 1.6, md: 3 } }}>{rightColumnAfter}</Box>
           ) : null}
