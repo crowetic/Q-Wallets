@@ -61,7 +61,8 @@ import qortCoinRender from '../../assets/wallet-renders/qort-coin-render.png';
 import qortCoinIcon from '../../assets/qort.png';
 import rvnCoinRender from '../../assets/wallet-renders/rvn-coin-render.png';
 import rvnCoinIcon from '../../assets/rvn.png';
-import xmrCoinRender from '../../assets/wallet-renders/xmr-coin-render.svg';
+import xmrCoinRender from '../../assets/wallet-renders/xmr-coin-render.png';
+import xmrCoinIcon from '../../assets/wallet-renders/xmr-coin-render.svg';
 import {
   copyToClipboard,
   cropString,
@@ -195,7 +196,7 @@ const WALLET_VISUALS: Record<AddressBookCoinSymbol, WalletVisual> = {
   XMR: {
     coinType: 'XMR',
     accent: '#f26822',
-    coinIcon: xmrCoinRender,
+    coinIcon: xmrCoinIcon,
     coinImage: xmrCoinRender,
     decimals: 12,
     glow: 'rgba(242, 104, 34, 0.38)',
@@ -208,7 +209,7 @@ const WALLET_VISUALS: Record<AddressBookCoinSymbol, WalletVisual> = {
 const getWalletVars = (visual: Omit<WalletVisual, 'coinType'>) =>
   ({
     '--wallet-accent': visual.accent,
-    '--wallet-coin-image': `url(${visual.coinImage})`,
+    '--wallet-coin-image': `url("${visual.coinImage}")`,
     '--wallet-glow': visual.glow,
     '--wallet-glow-soft': visual.glowSoft,
   }) as Record<string, string>;
@@ -716,6 +717,7 @@ type WalletSummaryCardProps = {
   balance?: unknown;
   balanceDecimals?: number;
   balanceError?: string | null;
+  balanceDetails?: ReactNode;
   coin: WalletCoinSymbol;
   formattedBalance?: string;
   copyAddressLabel?: string;
@@ -734,6 +736,7 @@ export function WalletSummaryCard({
   balance,
   balanceDecimals,
   balanceError,
+  balanceDetails,
   coin,
   copyAddressLabel,
   formattedBalance,
@@ -1017,6 +1020,7 @@ export function WalletSummaryCard({
                 </>
               )}
             </Typography>
+            {balanceDetails}
           </Box>
         </Box>
 
@@ -3210,6 +3214,7 @@ type WalletWorkspaceProps = {
   balance?: unknown;
   balanceDecimals?: number;
   balanceError?: string | null;
+  balanceDetails?: ReactNode;
   children?: ReactNode;
   formattedBalance?: string;
   isBalanceLoading?: boolean;
@@ -3231,6 +3236,7 @@ export function WalletWorkspace({
   balance,
   balanceDecimals,
   balanceError,
+  balanceDetails,
   children,
   coin,
   formattedBalance,
@@ -3337,6 +3343,7 @@ export function WalletWorkspace({
           balance={balance}
           balanceDecimals={balanceDecimals}
           balanceError={balanceError}
+          balanceDetails={balanceDetails}
           coin={coin}
           formattedBalance={formattedBalance}
           isBalanceLoading={isBalanceLoading}

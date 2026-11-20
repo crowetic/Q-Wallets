@@ -358,6 +358,8 @@
     "confirmations": "التأكيدات",
     "received": "مستلم",
     "sent_label": "مرسل",
-    "unconfirmed": "غير مؤكدة"
+    "unconfirmed": "غير مؤكدة",
+    "locked": "مقفل: {{amount}} sXMR",
+    "locked_help": "تصبح الأموال المقفلة متاحة بعد انتهاء فترة التأكيد في Monero."
   }
 }

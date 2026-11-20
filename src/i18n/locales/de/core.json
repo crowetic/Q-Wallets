@@ -358,6 +358,8 @@
     "confirmations": "Bestätigungen",
     "received": "Empfangen",
     "sent_label": "Gesendet",
-    "unconfirmed": "Unbestätigt"
+    "unconfirmed": "Unbestätigt",
+    "locked": "Gesperrt: {{amount}} sXMR",
+    "locked_help": "Gesperrte Mittel werden nach der Bestätigungsfrist von Monero verfügbar."
   }
 }

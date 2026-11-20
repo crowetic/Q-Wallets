@@ -2,6 +2,20 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.4.0-xmr.5] - 2026-11-20
+
+### Fixed
+
+- Restore the XMR wallet's shared two-column layout and transparent summary. An unquoted inline SVG URL caused browsers to discard the remaining layout styles.
+- Keep synchronization, restore controls and daemon information in the sidebar beside the summary and transactions, matching the other coin pages. Receive QR and the address book retain their shared placements.
+- Show total and locked XMR beside the main available balance. After sending, change can be locked while the total remains nonzero. The existing ten-second status refresh updates these figures automatically as funds unlock.
+- Place transaction hashes next to sent/received amounts and use compact columns and row typography, preserving exact amounts, full hash copying, confirmations, timestamps and pagination.
+
+### Changed
+
+- Replace the large XMR illustration with a generated transparent copper coin render, including a raised Monero emblem, engraved face and ridged edge, to match the other wallet coins.
+- Retain all xmr.4 Send Max fixes. This interface update needs no additional Hub, Core or native wallet changes; ARRR's xmr.4 spendable-balance feature still requires its matching updated Hub.
+
 ## [1.4.0-xmr.4] - 2026-11-20
 
 ### Fixed

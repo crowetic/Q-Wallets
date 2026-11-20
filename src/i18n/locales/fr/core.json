@@ -358,6 +358,8 @@
     "confirmations": "Confirmations",
     "received": "Reçu",
     "sent_label": "Envoyé",
-    "unconfirmed": "Non confirmée"
+    "unconfirmed": "Non confirmée",
+    "locked": "Verrouillé : {{amount}} sXMR",
+    "locked_help": "Les fonds verrouillés deviennent disponibles après la période de confirmation de Monero."
   }
 }

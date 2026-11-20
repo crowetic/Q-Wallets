@@ -283,6 +283,48 @@ export default function MoneroWallet() {
               status ? decimalAmount(status.unlockedBalanceAtomic) : null
             }
             balanceDecimals={12}
+            balanceDetails={
+              status && (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gap: 0.4,
+                    mt: 1,
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {t('core:xmr.total', {
+                      amount: decimalAmount(status.balanceAtomic),
+                    })}
+                  </Typography>
+                  {BigInt(status.balanceAtomic) >
+                    BigInt(status.unlockedBalanceAtomic) && (
+                    <>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: 'warning.main' }}
+                      >
+                        {t('core:xmr.locked', {
+                          amount: decimalAmount(
+                            (
+                              BigInt(status.balanceAtomic) -
+                              BigInt(status.unlockedBalanceAtomic)
+                            ).toString()
+                          ),
+                        })}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: 'text.secondary' }}
+                      >
+                        {t('core:xmr.locked_help')}
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+              )
+            }
             coin="XMR"
             formattedBalance={
               status
@@ -306,35 +348,113 @@ export default function MoneroWallet() {
             onToggleReceive={() => setReceiveOpen((open) => !open)}
             receiveOpen={receiveOpen}
             rightColumnAfter={
-              <WalletCard>
-                <Box sx={{ p: 2.5 }}>
-                  <Stack spacing={2}>
-                    <Typography variant="h6">
-                      {t('core:xmr.receive')}
-                    </Typography>
-                    <TextField
-                      fullWidth
-                      label={t('core:xmr.faucet')}
-                      value={FAUCET_URL}
-                      slotProps={{ input: { readOnly: true } }}
-                      onFocus={(event) => event.target.select()}
-                    />
-                    <Button
-                      onClick={copyFaucet}
-                      startIcon={<ContentCopy />}
-                      variant="outlined"
-                    >
-                      {t('core:xmr.copy_faucet')}
-                    </Button>
-                    <Typography variant="body2">
-                      {t('core:xmr.faucet_help')}
-                    </Typography>
-                    <Typography variant="body2">
-                      {t('core:xmr.backup')}
-                    </Typography>
-                  </Stack>
-                </Box>
-              </WalletCard>
+              <Box sx={{ display: 'grid', gap: 3, minWidth: 0 }}>
+                {status && (
+                  <WalletCard sx={{ width: '100%' }}>
+                    <Box sx={{ p: 2.5 }}>
+                      <Stack spacing={2}>
+                        <Typography variant="h6">
+                          {t('core:xmr.wallet')}
+                        </Typography>
+                        <Typography>
+                          {t('core:xmr.heights', {
+                            wallet: status.walletHeight,
+                            daemon: status.daemonHeight,
+                          })}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ overflowWrap: 'anywhere' }}
+                        >
+                          {t('core:xmr.daemon', { url: status.daemonUrl })}
+                        </Typography>
+                        {status.error && (
+                          <Alert severity="error">
+                            {t('core:xmr.scan_error')}
+                          </Alert>
+                        )}
+                        {!status.initialized ? (
+                          <>
+                            <Alert severity="info">
+                              {t('core:xmr.restore_help')}
+                            </Alert>
+                            <TextField
+                              label={t('core:xmr.restore_height')}
+                              value={restoreHeight}
+                              onChange={(event) =>
+                                setRestoreHeight(event.target.value)
+                              }
+                              slotProps={{
+                                htmlInput: { inputMode: 'numeric' },
+                              }}
+                              disabled={busy}
+                            />
+                            <Button
+                              disabled={busy}
+                              onClick={() =>
+                                setRestoreHeight(String(status.daemonHeight))
+                              }
+                            >
+                              {t('core:xmr.use_tip')}
+                            </Button>
+                            <Button
+                              disabled={busy}
+                              onClick={start}
+                              variant="contained"
+                            >
+                              {t('core:xmr.start')}
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <LinearProgress
+                              variant="determinate"
+                              value={status.progress * 100}
+                              aria-label={t('core:xmr.progress')}
+                            />
+                            <Typography>
+                              {t(
+                                status.synced && !status.syncing
+                                  ? 'core:xmr.ready'
+                                  : 'core:xmr.wait_sync'
+                              )}
+                            </Typography>
+                          </>
+                        )}
+                      </Stack>
+                    </Box>
+                  </WalletCard>
+                )}
+                <WalletCard>
+                  <Box sx={{ p: 2.5 }}>
+                    <Stack spacing={2}>
+                      <Typography variant="h6">
+                        {t('core:xmr.receive')}
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        label={t('core:xmr.faucet')}
+                        value={FAUCET_URL}
+                        slotProps={{ input: { readOnly: true } }}
+                        onFocus={(event) => event.target.select()}
+                      />
+                      <Button
+                        onClick={copyFaucet}
+                        startIcon={<ContentCopy />}
+                        variant="outlined"
+                      >
+                        {t('core:xmr.copy_faucet')}
+                      </Button>
+                      <Typography variant="body2">
+                        {t('core:xmr.faucet_help')}
+                      </Typography>
+                      <Typography variant="body2">
+                        {t('core:xmr.backup')}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                </WalletCard>
+              </Box>
             }
             transactions={
               <XmrTransactions
@@ -350,83 +470,6 @@ export default function MoneroWallet() {
               />
             }
           >
-            {status && (
-              <WalletCard>
-                <Box sx={{ p: 2.5 }}>
-                  <Stack spacing={2}>
-                    <Typography variant="h6">{t('core:xmr.wallet')}</Typography>
-                    <Typography>
-                      {t('core:xmr.total', {
-                        amount: decimalAmount(status.balanceAtomic),
-                      })}
-                    </Typography>
-                    <Typography>
-                      {t('core:xmr.unlocked', {
-                        amount: decimalAmount(status.unlockedBalanceAtomic),
-                      })}
-                    </Typography>
-                    <Typography>
-                      {t('core:xmr.heights', {
-                        wallet: status.walletHeight,
-                        daemon: status.daemonHeight,
-                      })}
-                    </Typography>
-                    <Typography variant="body2">
-                      {t('core:xmr.daemon', { url: status.daemonUrl })}
-                    </Typography>
-                    {status.error && (
-                      <Alert severity="error">{t('core:xmr.scan_error')}</Alert>
-                    )}
-                    {!status.initialized ? (
-                      <>
-                        <Alert severity="info">
-                          {t('core:xmr.restore_help')}
-                        </Alert>
-                        <TextField
-                          label={t('core:xmr.restore_height')}
-                          value={restoreHeight}
-                          onChange={(event) =>
-                            setRestoreHeight(event.target.value)
-                          }
-                          slotProps={{ htmlInput: { inputMode: 'numeric' } }}
-                          disabled={busy}
-                        />
-                        <Button
-                          disabled={busy}
-                          onClick={() =>
-                            setRestoreHeight(String(status.daemonHeight))
-                          }
-                        >
-                          {t('core:xmr.use_tip')}
-                        </Button>
-                        <Button
-                          disabled={busy}
-                          onClick={start}
-                          variant="contained"
-                        >
-                          {t('core:xmr.start')}
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <LinearProgress
-                          variant="determinate"
-                          value={status.progress * 100}
-                          aria-label={t('core:xmr.progress')}
-                        />
-                        <Typography>
-                          {t(
-                            status.synced && !status.syncing
-                              ? 'core:xmr.ready'
-                              : 'core:xmr.wait_sync'
-                          )}
-                        </Typography>
-                      </>
-                    )}
-                  </Stack>
-                </Box>
-              </WalletCard>
-            )}
             {status?.pending && (
               <Alert severity="warning">
                 <Stack spacing={1}>

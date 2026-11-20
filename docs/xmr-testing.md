@@ -89,3 +89,18 @@ XMR Max remains conservative: unlocked balance minus the full maximum fee, using
 12-decimal strings. If the actual fee is lower, unused reserve remains in the
 wallet. Pending-payment, synchronization and Hub approval guards still apply.
 No test run signs or broadcasts a payment using a real account.
+
+Testing build **1.4.0-xmr.5** fixes the XMR layout shown in the earlier testing
+screenshots. The summary and transactions use the main column; contacts,
+synchronization/restore controls and faucet copying use the sidebar. A quoted
+coin-image CSS URL prevents inline SVG characters from breaking later styles.
+The large coin now uses a generated transparent PNG; the compact icon is retained.
+
+The main **available balance** remains the unlocked amount used for payments.
+Total and locked amounts are now visible beside it, so locked change does not
+look like a lost balance after sending. Status is refreshed immediately after a
+successful send and every ten seconds while connected. Confirm that total,
+available and locked amounts update when change unlocks without manual refresh.
+Transaction rows place the copyable hash next to the amount and scroll locally
+at narrow widths. This layout update introduces no new host requirement beyond
+xmr.4; retain the prior ZIP for rollback and preserve any unresolved payment journal.

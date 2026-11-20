@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -8,7 +9,7 @@ import {
 } from '@testing-library/react';
 import walletContext, { defaultState } from '../../../contexts/walletContext';
 import MoneroWallet from '../index';
-import xmrLogo from '../../../assets/wallet-renders/xmr-coin-render.svg';
+import xmrLogo from '../../../assets/wallet-renders/xmr-coin-render.png';
 import {
   addAddress,
   getAddressBook,
@@ -564,4 +565,61 @@ it('uses saved XMR contacts with the common address book without mixing coins or
   setAddressBookAccountScope(state.address);
   expect(getAddressBook('XMR')).toHaveLength(1);
   expect(getAddressBook(Coin.BTC)).toHaveLength(1);
+});
+
+it('refreshes the main total and available balance after sending and when change unlocks', async () => {
+  let sent = false;
+  let unlocked = false;
+  const interval = vi.spyOn(globalThis, 'setInterval');
+  request.mockImplementation(async ({ action }) => {
+    if (action === 'GET_USER_WALLET')
+      return { address: status.address, network: 'stagenet' };
+    if (action === 'SEND_COIN') {
+      sent = true;
+      return 'a'.repeat(64);
+    }
+    return {
+      ...status,
+      balanceAtomic: sent ? '449969620000' : '500000000000',
+      unlockedBalanceAtomic: sent
+        ? unlocked
+          ? '449969620000'
+          : '0'
+        : '500000000000',
+    };
+  });
+  try {
+    show();
+    await connect();
+    expect(screen.getByText('0.5')).toBeInTheDocument();
+    openSend();
+    fireEvent.change(screen.getByLabelText('core:xmr.recipient'), {
+      target: { value: status.address },
+    });
+    fireEvent.change(screen.getByLabelText('core:xmr.amount'), {
+      target: { value: '.05' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'core:action.send capitalizeFirstChar',
+      })
+    );
+    await screen.findByText('core:xmr.total 0.44996962');
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('core:xmr.locked 0.44996962')).toBeInTheDocument();
+    expect(screen.getByText('core:xmr.locked_help')).toBeInTheDocument();
+    const poll = interval.mock.calls.find(
+      ([, delay]) => delay === 10000
+    )![0] as () => Promise<void>;
+    unlocked = true;
+    await act(async () => poll());
+    expect(screen.getByText('0.44996962')).toBeInTheDocument();
+    expect(screen.getByText('core:xmr.total 0.44996962')).toBeInTheDocument();
+    expect(screen.queryByText('core:xmr.locked_help')).not.toBeInTheDocument();
+    expect(
+      request.mock.calls.filter(([args]) => args.action === 'SEND_COIN')
+    ).toHaveLength(1);
+  } finally {
+    interval.mockRestore();
+  }
 });

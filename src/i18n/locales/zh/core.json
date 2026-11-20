@@ -359,6 +359,8 @@
     "confirmations": "确认数",
     "received": "已接收",
     "sent_label": "已发送",
-    "unconfirmed": "未确认"
+    "unconfirmed": "未确认",
+    "locked": "已锁定：{{amount}} sXMR",
+    "locked_help": "锁定的资金将在Monero的确认期结束后可用。"
   }
 }

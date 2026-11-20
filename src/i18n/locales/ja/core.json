@@ -359,6 +359,8 @@
     "confirmations": "承認数",
     "received": "受取",
     "sent_label": "送信",
-    "unconfirmed": "未承認"
+    "unconfirmed": "未承認",
+    "locked": "ロック中: {{amount}} sXMR",
+    "locked_help": "ロック中の資金はMoneroの承認期間が過ぎると利用可能になります。"
   }
 }

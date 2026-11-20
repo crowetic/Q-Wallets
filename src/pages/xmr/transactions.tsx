@@ -16,12 +16,11 @@ import { decimalAmount, type XmrTransaction } from './api';
 const rowSx = {
   alignItems: 'center',
   display: 'grid',
-  gap: 2,
-  gridTemplateColumns:
-    'minmax(185px, 1.4fr) 120px 110px 150px minmax(150px, 1fr)',
-  minWidth: 795,
-  px: 2,
-  py: 1.5,
+  gap: 1.25,
+  gridTemplateColumns: '150px minmax(150px, 1fr) 130px 110px 150px',
+  minWidth: 725,
+  px: 1.5,
+  py: 1.25,
 } as const;
 
 export default function XmrTransactions({
@@ -79,12 +78,21 @@ export default function XmrTransactions({
             <Box role="row" sx={{ ...rowSx, color: 'text.secondary' }}>
               {[
                 'core:amount',
+                'core:transaction_hash',
                 'core:fee.fee',
                 'core:xmr.confirmations',
                 'core:time',
-                'core:transaction_hash',
               ].map((key) => (
-                <Typography key={key} role="columnheader" variant="caption">
+                <Typography
+                  key={key}
+                  role="columnheader"
+                  variant="caption"
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                  }}
+                >
                   {t(key, { postProcess: 'capitalizeFirstChar' })}
                 </Typography>
               ))}
@@ -95,7 +103,16 @@ export default function XmrTransactions({
                 <Box
                   key={tx.txId}
                   role="row"
-                  sx={{ ...rowSx, borderColor: 'divider', borderTop: 1 }}
+                  sx={{
+                    ...rowSx,
+                    borderColor: 'divider',
+                    borderTop: 1,
+                    '& [role=cell]': {
+                      fontSize: 13,
+                      fontVariantNumeric: 'tabular-nums',
+                      overflowWrap: 'anywhere',
+                    },
+                  }}
                 >
                   <Box role="cell">
                     <Chip
@@ -109,21 +126,18 @@ export default function XmrTransactions({
                       size="small"
                       variant="outlined"
                     />
-                    <Typography sx={{ mt: 0.5 }}>
+                    <Typography
+                      sx={{
+                        color: tx.incoming ? 'success.main' : 'error.main',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        mt: 0.5,
+                        overflowWrap: 'anywhere',
+                      }}
+                    >
                       {decimalAmount(tx.amountAtomic)} XMR
                     </Typography>
                   </Box>
-                  <Typography role="cell">
-                    {decimalAmount(tx.feeAtomic)} XMR
-                  </Typography>
-                  <Typography role="cell">{tx.confirmations}</Typography>
-                  <Typography role="cell" variant="body2">
-                    {tx.timestamp
-                      ? new Date(tx.timestamp * 1000).toLocaleString(
-                          i18n?.resolvedLanguage
-                        )
-                      : t('core:xmr.unconfirmed')}
-                  </Typography>
                   <Box
                     role="cell"
                     sx={{ alignItems: 'center', display: 'flex', minWidth: 0 }}
@@ -131,7 +145,7 @@ export default function XmrTransactions({
                     <Tooltip title={tx.txId}>
                       <Typography
                         noWrap
-                        sx={{ fontFamily: 'monospace', userSelect: 'all' }}
+                        sx={{ fontSize: 13, minWidth: 0, userSelect: 'all' }}
                       >
                         {tx.txId}
                       </Typography>
@@ -144,6 +158,17 @@ export default function XmrTransactions({
                       <ContentCopy fontSize="small" />
                     </IconButton>
                   </Box>
+                  <Typography role="cell">
+                    {decimalAmount(tx.feeAtomic)} XMR
+                  </Typography>
+                  <Typography role="cell">{tx.confirmations}</Typography>
+                  <Typography role="cell" variant="body2">
+                    {tx.timestamp
+                      ? new Date(tx.timestamp * 1000).toLocaleString(
+                          i18n?.resolvedLanguage
+                        )
+                      : t('core:xmr.unconfirmed')}
+                  </Typography>
                 </Box>
               ))}
           </Box>

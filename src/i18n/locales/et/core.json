@@ -358,6 +358,8 @@
     "confirmations": "Kinnitused",
     "received": "Saadud",
     "sent_label": "Saadetud",
-    "unconfirmed": "Kinnitamata"
+    "unconfirmed": "Kinnitamata",
+    "locked": "Lukustatud: {{amount}} sXMR",
+    "locked_help": "Lukustatud vahendid muutuvad kasutatavaks pärast Monero kinnitusperioodi."
   }
 }
