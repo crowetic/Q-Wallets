@@ -249,7 +249,10 @@
     "arrr_address_invalid": "Valitud Core ei tunne seda ARRR-aadressi ära.",
     "arrr_validation_unavailable": "Aadressi kontrollimine pole saadaval. Kontrolli Core’i ühendust ja versiooni.",
     "arrr_validating": "Aadressi kontrollitakse Core’i abil…",
-    "arrr_send_failed": "ARRR-i saatmine ebaõnnestus. Kontrolli rahakoti olekut ja ühendust Core’iga."
+    "arrr_send_failed": "ARRR-i saatmine ebaõnnestus. Kontrolli rahakoti olekut ja ühendust Core’iga.",
+    "max_sendable_estimate": "Hinnanguline maksimum {{amount}} {{symbol}}",
+    "max_finalized_in_hub": "Hub arvutab lõpliku summa ja võrgutasu enne sinu kinnitust.",
+    "waiting_fee": "Võrgutasu ootel. Uuesti proovimiseks ava saatmisaken uuesti."
   },
   "filters": {
     "all": "Kõik",

@@ -60,7 +60,7 @@ import {
 } from '../../styles/page-styles';
 import { Coin } from 'qapp-core';
 import { validateDgbAddress } from '../../utils/addressValidation';
-import { calculateMaxSendable } from '../../utils/maxSendable';
+import { calculateMaxSendable, canRequestMax } from '../../utils/maxSendable';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -209,6 +209,7 @@ export default function DigibyteWallet() {
     );
   const {
     amount: dgbAmount,
+    isMaxSelected: isDgbMax,
     setAmount: setDgbAmount,
     sendMax: handleSendMaxDgb,
   } = useSendAmount(maxSendableDbgCoin());
@@ -243,10 +244,11 @@ export default function DigibyteWallet() {
   };
 
   const disableCanSendDgb = () =>
-    dgbAmount <= 0 ||
+    (!isDgbMax && dgbAmount <= 0) ||
+    (isDgbMax && (!sendFee || !canRequestMax(walletBalanceDgb))) ||
     dgbRecipient === EMPTY_STRING ||
     addressFormatError ||
-    dgbAmount > maxSendableDbgCoin();
+    (!isDgbMax && dgbAmount > maxSendableDbgCoin());
 
   const handleRecipientChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -431,12 +433,15 @@ export default function DigibyteWallet() {
     setSendDgbError(EMPTY_STRING);
     setOpenSendDgbError(false);
     setOpenSendDgbSuccess(false);
-    if (!Number.isFinite(dgbAmount) || dgbAmount <= 0) {
+    if (!isDgbMax && (!Number.isFinite(dgbAmount) || dgbAmount <= 0)) {
       setSendDgbError(t('core:message.error.amount_positive'));
       setOpenSendDgbError(true);
       return;
     }
-    if (dgbAmount > maxSendableDbgCoin()) {
+    if (
+      (isDgbMax && !canRequestMax(walletBalanceDgb)) ||
+      (!isDgbMax && dgbAmount > maxSendableDbgCoin())
+    ) {
       setSendDgbError(
         t('core:message.error.amount_exceeds_balance', {
           maxAmount: maxSendableDbgCoin(),
@@ -460,7 +465,7 @@ export default function DigibyteWallet() {
         action: 'SEND_COIN',
         coin: Coin.DGB,
         recipient: dgbRecipient,
-        amount: dgbAmount,
+        ...(isDgbMax ? { sendMax: true } : { amount: dgbAmount }),
         fee: dgbFeeCalculated,
       });
       requireSendCoinTransactionId(
@@ -677,6 +682,12 @@ export default function DigibyteWallet() {
             />
           }
           isBalanceLoading={isLoadingWalletBalanceDgb}
+          maxIsEstimate
+          maxSelected={isDgbMax}
+          isSubmitting={openTxDgbSubmit}
+          sendMaxDisabled={
+            !sendFee || !canRequestMax(walletBalanceDgb) || openTxDgbSubmit
+          }
           maxSendable={maxSendableDbgCoin()}
           onAmountChange={setDgbAmount}
           onClearRecipient={handleClearDgbRecipient}

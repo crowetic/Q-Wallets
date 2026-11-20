@@ -16,14 +16,20 @@ export type FeeEstimate = {
 };
 
 export function isValidFeeEstimate(obj: unknown): obj is FeeEstimate {
+  if (!obj || typeof obj !== 'object') return false;
+  const value = obj as Record<string, unknown>;
   return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    typeof (obj as any).height === 'number' &&
-    typeof (obj as any).time === 'number' &&
-    typeof (obj as any).low_fee_per_kb === 'number' &&
-    typeof (obj as any).medium_fee_per_kb === 'number' &&
-    typeof (obj as any).high_fee_per_kb === 'number'
+    Number.isSafeInteger(value.height) &&
+    Number(value.height) >= 0 &&
+    typeof value.time === 'number' &&
+    Number.isFinite(value.time) &&
+    value.time > 0 &&
+    ['low_fee_per_kb', 'medium_fee_per_kb', 'high_fee_per_kb'].every(
+      (key) =>
+        typeof value[key] === 'number' &&
+        Number.isFinite(value[key]) &&
+        Number(value[key]) > 0
+    )
   );
 }
 
@@ -61,7 +67,7 @@ const fetchJsonWithTimeout = async (url: string): Promise<unknown> => {
       throw new Error(`Fee request failed: ${response.status}`);
     }
 
-    return response.json();
+    return await response.json();
   } finally {
     window.clearTimeout(timeoutId);
   }
@@ -77,52 +83,71 @@ export const useRecommendedFees = ({
     useState<string>('JSON.Bridge');
   const [selectFeeType, setSelectFeeType] = useState<FeeType>('medium');
   const [customFee, setCustomFee] = useState<number>(0);
-  const [feeData, setFeeData] = useState<unknown>(null);
+  const [feeData, setFeeData] = useState<{
+    scope: string;
+    value: unknown;
+  } | null>(null);
 
   const coin = useMemo<string | null>(() => {
     if (!selectedCoin) return null;
     return selectedCoin;
   }, [selectedCoin]);
 
-  const getLatestFees = useCallback(async (): Promise<void> => {
-    try {
-      if (!selectedFeePublisher || !coin) return;
-      const identifier = `coinInfo-${coin}`;
-      const searchParams = new URLSearchParams({
-        identifier,
-        limit: '1',
-        name: selectedFeePublisher,
-        prefix: 'true',
-        reverse: 'true',
-        service: 'JSON',
-      });
-      const data = await fetchQortalJson(
-        `/arbitrary/resources/searchsimple?${searchParams.toString()}`
-      );
-      if (Array.isArray(data) && data.length > 0) {
-        const location = data[0] as { name: string; identifier: string };
-        const dataBridge = await fetchQortalJson(
-          `/arbitrary/JSON/${encodeURIComponent(
-            location.name
-          )}/${encodeURIComponent(location.identifier)}`
-        );
-        setFeeData(dataBridge);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  }, [selectedFeePublisher, coin]);
-
+  const scope = `${selectedFeePublisher}:${coin ?? ''}`;
   useEffect(() => {
-    getLatestFees();
-  }, [getLatestFees]);
+    let stopped = false;
+    const getLatestFees = async () => {
+      if (!selectedFeePublisher || !coin) return;
+      try {
+        const identifier = `coinInfo-${coin}`;
+        const searchParams = new URLSearchParams({
+          identifier,
+          limit: '1',
+          name: selectedFeePublisher,
+          prefix: 'true',
+          reverse: 'true',
+          service: 'JSON',
+        });
+        const resources = await fetchQortalJson(
+          `/arbitrary/resources/searchsimple?${searchParams.toString()}`
+        );
+        if (stopped) return;
+        const location = Array.isArray(resources) ? resources[0] : null;
+        if (
+          !location ||
+          location.name !== selectedFeePublisher ||
+          typeof location.identifier !== 'string' ||
+          !location.identifier.startsWith(identifier)
+        )
+          throw new Error('Fee resource unavailable');
+        const value = await fetchQortalJson(
+          `/arbitrary/JSON/${encodeURIComponent(location.name)}/${encodeURIComponent(location.identifier)}`
+        );
+        if (!stopped) setFeeData({ scope, value });
+      } catch (error) {
+        if (!stopped) {
+          setFeeData(null);
+          console.error(error);
+        }
+      }
+    };
+    void getLatestFees();
+    const timer = window.setInterval(getLatestFees, 60000);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [selectedFeePublisher, coin, scope]);
 
   const recommendedFeeData = useMemo<FeeEstimate | null>(() => {
-    if (!feeData) return null;
-    const isValid = isValidFeeEstimate(feeData);
-    if (!isValid) return null;
-    return feeData;
-  }, [feeData]);
+    if (
+      !feeData ||
+      feeData.scope !== scope ||
+      !isValidFeeEstimate(feeData.value)
+    )
+      return null;
+    return feeData.value;
+  }, [feeData, scope]);
 
   const selectFee = useMemo<number | null>(() => {
     if (!recommendedFeeData) return null;

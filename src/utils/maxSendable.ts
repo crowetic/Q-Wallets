@@ -1,56 +1,74 @@
-import { DECIMAL_ROUND_UP } from '../common/constants';
+const UNITS = 100000000n;
 
-/**
- * Number of satoshis (smallest units) in one whole coin for the UTXO coins
- * used in this app (BTC, LTC, DOGE, DGB, RVN, ARRR).
- */
-const SATS_PER_COIN = 1e8;
+// Parse balance strings before Number conversion. Extra balance decimals round
+// down; extra fee decimals round up, so neither can increase the maximum.
+const atomicUnits = (
+  value: number | string,
+  roundUp = false
+): bigint | null => {
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  if (typeof value === 'number' && (!Number.isFinite(value) || value < 0))
+    return null;
+  const text =
+    typeof value === 'number'
+      ? /e/i.test(String(value))
+        ? value.toFixed(24)
+        : String(value)
+      : value.trim();
+  if (text.length > 128 || !/^\d+(\.\d+)?$/.test(text)) return null;
+  const [whole, fraction = ''] = text.split('.');
+  return (
+    BigInt(whole) * UNITS +
+    BigInt(fraction.slice(0, 8).padEnd(8, '0')) +
+    (roundUp && /[1-9]/.test(fraction.slice(8)) ? 1n : 0n)
+  );
+};
 
-/**
- * Compute the maximum safely-spendable amount for a "SEND MAX" action.
- *
- * The naive `balance - fee` expression is computed in JS floating point on an
- * exact boundary value, so the prefilled amount can land right on — or a hair
- * above — the spendable cutoff. The host `SEND_COIN` check then rejects it as
- * "Insufficient funds", even though sending slightly less succeeds.
- *
- * To avoid this we:
- *  1. Do the subtraction in integer satoshi math (no float boundary error).
- *  2. Hold back a small safety buffer so the result stays strictly within the
- *     balance, absorbing fee-estimate and serialization slack.
- *
- * @param balance    Wallet balance, in whole coins. The host
- *                   `GET_WALLET_BALANCE` request returns this as a numeric
- *                   string, so string inputs are coerced to a number.
- * @param fee        Estimated fee to reserve, in whole coins.
- * @param bufferSats Extra satoshis to hold back as a safety margin (default 0).
- * @returns The max sendable amount in whole coins (never negative), truncated
- *          to {@link DECIMAL_ROUND_UP} decimal places.
- */
+export const canRequestMax = (balance: number | string): boolean => {
+  const units = atomicUnits(balance);
+  return units !== null && units > 0n;
+};
+
+/** Conservative eight-decimal preview/manual limit, retaining the safety buffer.
+ * Native UTXO Max requests let Hub compute the final fee from its inputs. */
 export const calculateMaxSendable = (
   balance: number | string,
   fee: number | string,
-  bufferSats: number = 0
+  bufferSats = 0
 ): number => {
-  // Coerce first: the wallet balance arrives as a numeric string, and
-  // Number.isFinite() does not coerce (Number.isFinite('700') === false).
-  const balanceNum = Number(balance);
-  const feeNum = Number(fee);
-  if (!Number.isFinite(balanceNum) || !Number.isFinite(feeNum)) {
+  const balanceSats = atomicUnits(balance);
+  const feeSats = atomicUnits(fee, true);
+  if (
+    balanceSats === null ||
+    feeSats === null ||
+    !Number.isSafeInteger(bufferSats)
+  )
     return 0;
+  const hostBalance = Number(balance) * Number(UNITS);
+  if (!Number.isFinite(hostBalance)) return 0;
+  const hostBalanceSats = BigInt(Math.round(hostBalance));
+  let maximum =
+    (balanceSats < hostBalanceSats ? balanceSats : hostBalanceSats) -
+    feeSats -
+    BigInt(Math.max(0, bufferSats));
+  // Not every atomic value at large balances is representable by legacy Number
+  // bridges. Step down rather than rounding above their spendable boundary.
+  for (let attempt = 0; attempt < 4 && maximum > 0n; attempt++) {
+    const amount = Number(
+      `${maximum / UNITS}.${(maximum % UNITS).toString().padStart(8, '0')}`
+    );
+    const decimalUnits = atomicUnits(amount, true);
+    const hostUnits = amount * Number(UNITS);
+    if (
+      decimalUnits !== null &&
+      decimalUnits <= maximum &&
+      Number.isFinite(hostUnits) &&
+      BigInt(Math.ceil(hostUnits)) <= maximum
+    )
+      return amount;
+    maximum -= BigInt(
+      Math.max(1, Math.ceil(Math.abs(amount) * Number.EPSILON * Number(UNITS)))
+    );
   }
-
-  const balanceSats = Math.round(balanceNum * SATS_PER_COIN);
-  const feeSats = Math.round(feeNum * SATS_PER_COIN);
-  const buffer = Math.max(0, Math.trunc(bufferSats));
-
-  const maxSats = balanceSats - feeSats - buffer;
-  if (maxSats <= 0) {
-    return 0;
-  }
-
-  // maxSats is an integer count of satoshis, so dividing by SATS_PER_COIN and
-  // truncating to DECIMAL_ROUND_UP places yields an exact, safely-spendable
-  // value that round-trips back to <= balanceSats when the fee is re-added.
-  return +(maxSats / SATS_PER_COIN).toFixed(DECIMAL_ROUND_UP);
+  return 0;
 };

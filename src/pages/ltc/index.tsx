@@ -48,7 +48,7 @@ import {
 import { FeeManager } from '../../components/FeeManager';
 import { Coin } from 'qapp-core';
 import { validateLtcAddress } from '../../utils/addressValidation';
-import { calculateMaxSendable } from '../../utils/maxSendable';
+import { calculateMaxSendable, canRequestMax } from '../../utils/maxSendable';
 import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
 import {
   WalletExternalTransactionsList,
@@ -185,6 +185,7 @@ export default function LitecoinWallet() {
     );
   const {
     amount: ltcAmount,
+    isMaxSelected: isLtcMax,
     setAmount: setLtcAmount,
     sendMax: handleSendMaxLtc,
   } = useSendAmount(maxSendableLtcCoin());
@@ -221,10 +222,11 @@ export default function LitecoinWallet() {
   };
 
   const disableCanSendLtc = () =>
-    ltcAmount <= 0 ||
+    (!isLtcMax && ltcAmount <= 0) ||
+    (isLtcMax && (!sendFee || !canRequestMax(walletBalanceLtc))) ||
     ltcRecipient === EMPTY_STRING ||
     addressFormatError ||
-    ltcAmount > maxSendableLtcCoin();
+    (!isLtcMax && ltcAmount > maxSendableLtcCoin());
 
   const handleRecipientChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -407,12 +409,15 @@ export default function LitecoinWallet() {
     setSendLtcError(EMPTY_STRING);
     setOpenSendLtcError(false);
     setOpenSendLtcSuccess(false);
-    if (!Number.isFinite(ltcAmount) || ltcAmount <= 0) {
+    if (!isLtcMax && (!Number.isFinite(ltcAmount) || ltcAmount <= 0)) {
       setSendLtcError(t('core:message.error.amount_positive'));
       setOpenSendLtcError(true);
       return;
     }
-    if (ltcAmount > maxSendableLtcCoin()) {
+    if (
+      (isLtcMax && !canRequestMax(walletBalanceLtc)) ||
+      (!isLtcMax && ltcAmount > maxSendableLtcCoin())
+    ) {
       setSendLtcError(
         t('core:message.error.amount_exceeds_balance', {
           maxAmount: maxSendableLtcCoin(),
@@ -436,7 +441,7 @@ export default function LitecoinWallet() {
         action: 'SEND_COIN',
         coin: Coin.LTC,
         recipient: ltcRecipient,
-        amount: ltcAmount,
+        ...(isLtcMax ? { sendMax: true } : { amount: ltcAmount }),
         fee: ltcFeeCalculated,
       });
       requireSendCoinTransactionId(
@@ -640,6 +645,12 @@ export default function LitecoinWallet() {
           coinLogo={coinLogoLTC}
           feeContent={<FeeManager coin="LTC" onChange={setInputFee} />}
           isBalanceLoading={isLoadingWalletBalanceLtc}
+          maxIsEstimate
+          maxSelected={isLtcMax}
+          isSubmitting={openTxLtcSubmit}
+          sendMaxDisabled={
+            !sendFee || !canRequestMax(walletBalanceLtc) || openTxLtcSubmit
+          }
           maxSendable={maxSendableLtcCoin()}
           onAmountChange={setLtcAmount}
           onClearRecipient={handleClearLtcRecipient}

@@ -59,7 +59,7 @@ import {
 import { FeeManager } from '../../components/FeeManager';
 import { Coin } from 'qapp-core';
 import { validateDogeAddress } from '../../utils/addressValidation';
-import { calculateMaxSendable } from '../../utils/maxSendable';
+import { calculateMaxSendable, canRequestMax } from '../../utils/maxSendable';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -186,6 +186,7 @@ export default function DogecoinWallet() {
     );
   const {
     amount: dogeAmount,
+    isMaxSelected: isDogeMax,
     setAmount: setDogeAmount,
     sendMax: handleSendMaxDoge,
   } = useSendAmount(maxSendableDogeCoin());
@@ -218,10 +219,11 @@ export default function DogecoinWallet() {
   };
 
   const disableCanSendDoge = () =>
-    dogeAmount <= 0 ||
+    (!isDogeMax && dogeAmount <= 0) ||
+    (isDogeMax && (!sendFee || !canRequestMax(walletBalanceDoge))) ||
     dogeRecipient === EMPTY_STRING ||
     addressFormatError ||
-    dogeAmount > maxSendableDogeCoin();
+    (!isDogeMax && dogeAmount > maxSendableDogeCoin());
 
   const handleRecipientChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -402,12 +404,15 @@ export default function DogecoinWallet() {
     setSendDogeError(EMPTY_STRING);
     setOpenSendDogeError(false);
     setOpenSendDogeSuccess(false);
-    if (!Number.isFinite(dogeAmount) || dogeAmount <= 0) {
+    if (!isDogeMax && (!Number.isFinite(dogeAmount) || dogeAmount <= 0)) {
       setSendDogeError(t('core:message.error.amount_positive'));
       setOpenSendDogeError(true);
       return;
     }
-    if (dogeAmount > maxSendableDogeCoin()) {
+    if (
+      (isDogeMax && !canRequestMax(walletBalanceDoge)) ||
+      (!isDogeMax && dogeAmount > maxSendableDogeCoin())
+    ) {
       setSendDogeError(
         t('core:message.error.amount_exceeds_balance', {
           maxAmount: maxSendableDogeCoin(),
@@ -431,7 +436,7 @@ export default function DogecoinWallet() {
         action: 'SEND_COIN',
         coin: Coin.DOGE,
         recipient: dogeRecipient,
-        amount: dogeAmount,
+        ...(isDogeMax ? { sendMax: true } : { amount: dogeAmount }),
         fee: dogeFeeCalculated,
       });
       requireSendCoinTransactionId(
@@ -635,6 +640,12 @@ export default function DogecoinWallet() {
           coinLogo={coinLogoDOGE}
           feeContent={<FeeManager coin="DOGE" onChange={setInputFee} />}
           isBalanceLoading={isLoadingWalletBalanceDoge}
+          maxIsEstimate
+          maxSelected={isDogeMax}
+          isSubmitting={openTxDogeSubmit}
+          sendMaxDisabled={
+            !sendFee || !canRequestMax(walletBalanceDoge) || openTxDogeSubmit
+          }
           maxSendable={maxSendableDogeCoin()}
           onAmountChange={setDogeAmount}
           onClearRecipient={handleClearDogeRecipient}

@@ -30,6 +30,8 @@ interface QortalRequestOptions {
   list_name?: string;
   memo?: string;
   maxFee?: string;
+  sendMax?: boolean;
+  verified?: boolean;
   initialize?: boolean;
   restoreHeight?: number;
   retryPending?: boolean;

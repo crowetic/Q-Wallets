@@ -250,7 +250,10 @@
     "arrr_address_invalid": "選択したCoreはこのARRRアドレスを認識できません。",
     "arrr_validation_unavailable": "アドレスを検証できません。Coreの接続とバージョンを確認してください。",
     "arrr_validating": "Coreでアドレスを確認中…",
-    "arrr_send_failed": "ARRRの送信に失敗しました。ウォレットの状態とCoreへの接続を確認してください。"
+    "arrr_send_failed": "ARRRの送信に失敗しました。ウォレットの状態とCoreへの接続を確認してください。",
+    "max_sendable_estimate": "推定最大額 {{amount}} {{symbol}}",
+    "max_finalized_in_hub": "Hubは承認前に最終的な金額とネットワーク手数料を計算します。",
+    "waiting_fee": "ネットワーク手数料を取得しています。再試行するには送信画面を開き直してください。"
   },
   "filters": {
     "all": "すべて",

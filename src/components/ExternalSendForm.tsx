@@ -53,6 +53,8 @@ type ExternalSendFormProps = {
   isBalanceLoading: boolean;
   isSubmitting?: boolean;
   sendMaxDisabled?: boolean;
+  maxIsEstimate?: boolean;
+  maxSelected?: boolean;
   onClearRecipient?: () => void;
   onClose: () => void;
   onOpenAddressBook?: () => void;
@@ -230,6 +232,8 @@ export function ExternalSendForm({
   isSubmitting = false,
   maxSendable,
   sendMaxDisabled = false,
+  maxIsEstimate = false,
+  maxSelected = false,
   onAmountChange,
   onClearRecipient,
   onClose,
@@ -327,7 +331,7 @@ export function ExternalSendForm({
             {t('core:wallet.transfer_symbol', { symbol })}
           </Typography>
           <Button
-            disabled={sendDisabled}
+            disabled={sendDisabled || isSubmitting}
             variant="contained"
             startIcon={<NorthEast />}
             onClick={onSend}
@@ -621,17 +625,23 @@ export function ExternalSendForm({
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {t('core:send.max_sendable', {
-                      amount: displayMax,
-                      symbol,
-                    })}
+                    {t(
+                      maxIsEstimate
+                        ? 'core:send.max_sendable_estimate'
+                        : 'core:send.max_sendable',
+                      {
+                        amount: displayMax,
+                        symbol,
+                      }
+                    )}
                   </Typography>
                 </Box>
               </Tooltip>
               <Button
                 variant="text"
                 onClick={onSendMax}
-                disabled={sendMaxDisabled}
+                disabled={sendMaxDisabled || isSubmitting}
+                aria-pressed={maxSelected}
                 sx={{
                   color: 'primary.main',
                   fontSize: { xs: 13.8, sm: 14.2 },
@@ -697,6 +707,11 @@ export function ExternalSendForm({
               }}
               sx={amountFieldSx}
             />
+          )}
+          {maxIsEstimate && maxSelected && (
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {t('core:send.max_finalized_in_hub')}
+            </Typography>
           )}
         </Box>
 

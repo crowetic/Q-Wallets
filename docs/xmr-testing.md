@@ -70,3 +70,22 @@ recipient. Also test a declined approval, a 13-decimal amount, insufficient
 unlocked balance, Send Max after fee changes, and an unresolved pending payment.
 Confirm any approved payment in both wallets. The automated tests mock the Hub
 bridge and do not sign or broadcast a payment.
+
+Testing build **1.4.0-xmr.4** retains these XMR changes and reviews Send Max across
+all eight wallets. BTC, LTC, DOGE, DGB and RVN submit `sendMax: true` without an
+`amount`; the current Hub plans the final payment from confirmed inputs and asks
+for approval. The displayed amount is an estimate. Manual edits submit a normal
+fixed amount. Older hosts that require an amount reject the new Max request;
+there is no automatic fixed-amount fallback or payment retry.
+
+ARRR requests `GET_WALLET_BALANCE` with `verified: true`. **This requires the new
+matching Hub build** so that it asks the existing Core wallet-balance API for
+`verified=true`; older Hub builds ignore this option and include pending funds.
+No Core/JNI update or database migration is introduced by this Max fix. ARRR
+retains its fixed fee and safety buffer. QORT requires a successfully fetched
+network fee and refreshes it while the send dialog is open.
+
+XMR Max remains conservative: unlocked balance minus the full maximum fee, using
+12-decimal strings. If the actual fee is lower, unused reserve remains in the
+wallet. Pending-payment, synchronization and Hub approval guards still apply.
+No test run signs or broadcasts a payment using a real account.

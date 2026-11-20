@@ -129,7 +129,7 @@ export const useArrrWalletData = (enabled: boolean, account: string | null) => {
         try {
           if (delay) await pause(delay, signal);
           const response = await read<unknown>(
-            { action: 'GET_WALLET_BALANCE', coin: Coin.ARRR },
+            { action: 'GET_WALLET_BALANCE', coin: Coin.ARRR, verified: true },
             signal
           );
           if (

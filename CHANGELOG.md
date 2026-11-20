@@ -2,6 +2,26 @@
 
 All notable changes to Q-Wallets will be documented in this file.
 
+## [1.4.0-xmr.4] - 2026-11-20
+
+### Fixed
+
+- BTC, LTC, DOGE, DGB and RVN now submit an actual Max request to Hub. Hub plans the payment from confirmed spendable inputs and shows the final amount and fee for approval. The Q-App's fixed-size preview no longer determines the amount or blocks a valid Max request.
+- ARRR uses the verified spendable balance for Max rather than including pending or locked notes. Requires the matching updated Hub; its existing Core API and native wallet already provide this balance.
+- QORT waits for a valid network payment fee, refreshes it while sending and checks the current amount again before handoff. Failed fee reads cannot enable a guessed-fee Max payment.
+- Discard stale fee responses after changing coin or publisher, reject invalid rates and refresh publisher fees while the dialog is open.
+- Subtract balance and fee strings in atomic units. Round excess balance precision down, fees up and avoid rounding a large legacy numeric amount above the spendable boundary. Keep existing safety reserves.
+
+### Changed
+
+- Label Bitcoin-family Max amounts as estimates and explain that Hub calculates the final payment before approval. Manual amount edits leave Max mode.
+- Keep XMR's exact 12-decimal Max based on unlocked funds with the full fee limit reserved. Unused fee reserve can remain after payment; this is not an unrestricted sweep.
+- Retain the XMR sending and shared-interface updates from xmr.3. Translate new Max/fee guidance in all 11 languages.
+
+### Tests
+
+- Cover Max and manual handoff across all eight wallets, small balances that outgrow the old fee estimate, locked ARRR funds, unavailable/refreshed QORT fees, stale publisher replies and large decimal boundaries. Matching Hub tests exercise 40-input Max planning across all five Bitcoin-family coins without broadcasting.
+
 ## [1.4.0-xmr.3] - 2026-11-20
 
 ### Fixed

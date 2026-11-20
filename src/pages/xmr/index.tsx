@@ -531,6 +531,7 @@ export default function MoneroWallet() {
                 }
                 isSubmitting={busy}
                 isBalanceLoading={!status}
+                maxSelected={amountSelection.max}
                 maxSendable={maxSendable}
                 onClose={() => setSendOpen(false)}
                 onClearRecipient={() => {

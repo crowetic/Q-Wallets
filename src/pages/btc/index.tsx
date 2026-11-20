@@ -48,7 +48,7 @@ import {
 } from '../../styles/page-styles';
 import { Coin } from 'qapp-core';
 import { validateBtcAddress } from '../../utils/addressValidation';
-import { calculateMaxSendable } from '../../utils/maxSendable';
+import { calculateMaxSendable, canRequestMax } from '../../utils/maxSendable';
 import { AddressBookDialog } from '../../components/AddressBook/AddressBookDialog';
 import {
   WalletExternalTransactionsList,
@@ -184,6 +184,7 @@ export default function BitcoinWallet() {
     );
   const {
     amount: btcAmount,
+    isMaxSelected: isBtcMax,
     setAmount: setBtcAmount,
     sendMax: handleSendMaxBtc,
   } = useSendAmount(maxSendableBtcCoin());
@@ -218,10 +219,11 @@ export default function BitcoinWallet() {
   };
 
   const disableCanSendBtc = () =>
-    btcAmount <= 0 ||
+    (!isBtcMax && btcAmount <= 0) ||
+    (isBtcMax && (!sendFee || !canRequestMax(walletBalanceBtc))) ||
     btcRecipient === EMPTY_STRING ||
     addressFormatError ||
-    btcAmount > maxSendableBtcCoin();
+    (!isBtcMax && btcAmount > maxSendableBtcCoin());
 
   const handleRecipientChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -403,12 +405,15 @@ export default function BitcoinWallet() {
     setSendBtcError(EMPTY_STRING);
     setOpenSendBtcError(false);
     setOpenSendBtcSuccess(false);
-    if (!Number.isFinite(btcAmount) || btcAmount <= 0) {
+    if (!isBtcMax && (!Number.isFinite(btcAmount) || btcAmount <= 0)) {
       setSendBtcError(t('core:message.error.amount_positive'));
       setOpenSendBtcError(true);
       return;
     }
-    if (btcAmount > maxSendableBtcCoin()) {
+    if (
+      (isBtcMax && !canRequestMax(walletBalanceBtc)) ||
+      (!isBtcMax && btcAmount > maxSendableBtcCoin())
+    ) {
       setSendBtcError(
         t('core:message.error.amount_exceeds_balance', {
           maxAmount: maxSendableBtcCoin(),
@@ -432,7 +437,7 @@ export default function BitcoinWallet() {
         action: 'SEND_COIN',
         coin: Coin.BTC,
         recipient: btcRecipient,
-        amount: btcAmount,
+        ...(isBtcMax ? { sendMax: true } : { amount: btcAmount }),
         fee: btcFeeCalculated,
       });
       requireSendCoinTransactionId(
@@ -636,6 +641,12 @@ export default function BitcoinWallet() {
           coinLogo={coinLogoBTC}
           feeContent={<FeeManager coin="BTC" onChange={setInputFee} />}
           isBalanceLoading={isLoadingWalletBalanceBtc}
+          maxIsEstimate
+          maxSelected={isBtcMax}
+          isSubmitting={openTxBtcSubmit}
+          sendMaxDisabled={
+            !sendFee || !canRequestMax(walletBalanceBtc) || openTxBtcSubmit
+          }
           maxSendable={maxSendableBtcCoin()}
           onAmountChange={setBtcAmount}
           onClearRecipient={handleClearBtcRecipient}

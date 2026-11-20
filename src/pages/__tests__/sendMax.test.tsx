@@ -250,7 +250,7 @@ describe('wallet Send Max handoff', () => {
         action: 'SEND_COIN',
         coin,
         recipient: 'fixture-recipient',
-        amount: expectedMax,
+        sendMax: true,
         fee: sats / 1e8,
       });
 
@@ -278,6 +278,11 @@ describe('wallet Send Max handoff', () => {
     );
     await act(async () => {});
     await act(() => vi.advanceTimersByTimeAsync(10000));
+    expect(qortalRequest).toHaveBeenCalledWith({
+      action: 'GET_WALLET_BALANCE',
+      coin: 'ARRR',
+      verified: true,
+    });
     fireEvent.click(screen.getByText('Send to contact'));
     fireEvent.click(screen.getByText('Max'));
     expect(screen.getByLabelText('amount')).toHaveValue('0.99989');
@@ -297,6 +302,110 @@ describe('wallet Send Max handoff', () => {
       amount: 1.99989,
       memo: '',
     });
+  });
+
+  it.each([
+    { coin: 'BTC', Wallet: BitcoinWallet, balance: '0.00003', rate: 10000 },
+    { coin: 'LTC', Wallet: LitecoinWallet, balance: '0.0001', rate: 10000 },
+    { coin: 'DOGE', Wallet: DogecoinWallet, balance: '0.03', rate: 1000000 },
+    { coin: 'DGB', Wallet: DigibyteWallet, balance: '0.00008', rate: 10 },
+    { coin: 'RVN', Wallet: RavencoinWallet, balance: '0.00003', rate: 10 },
+  ])(
+    '$coin delegates Max even when the fixed-size preview reserves too much',
+    async ({ coin, Wallet, balance, rate }) => {
+      const bridge = vi.mocked(qortalRequest);
+      const original = bridge.getMockImplementation()!;
+      bridge.mockImplementation(async (request) =>
+        request.action === 'GET_WALLET_BALANCE' ? balance : original(request)
+      );
+      render(<Wallet />);
+      await act(async () => {});
+      fireEvent.click(screen.getByText('Send to contact'));
+      fireEvent.change(screen.getByLabelText('fee rate'), {
+        target: { value: String(rate) },
+      });
+      fireEvent.click(screen.getByText('Max'));
+      expect(screen.getByLabelText('amount')).toHaveValue('0');
+      expect(screen.getByText('Pay')).toBeEnabled();
+      await act(async () => fireEvent.click(screen.getByText('Pay')));
+      expect(bridge).toHaveBeenCalledWith({
+        action: 'SEND_COIN',
+        coin,
+        recipient: 'fixture-recipient',
+        sendMax: true,
+        fee:
+          (['BTC', 'LTC', 'DOGE'].includes(coin)
+            ? Math.ceil(rate / 1000)
+            : rate) / 1e8,
+      });
+    }
+  );
+
+  it('ARRR excludes locked funds from its Max preview', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => true })
+    );
+    const bridge = vi.mocked(qortalRequest);
+    const original = bridge.getMockImplementation()!;
+    bridge.mockImplementation(async (request) =>
+      request.action === 'GET_WALLET_BALANCE'
+        ? 'verified' in request && request.verified === true
+          ? '1'
+          : '10'
+        : original(request)
+    );
+    render(
+      <WalletContext.Provider
+        value={{ ...defaultState, isUsingGateway: false }}
+      >
+        <PirateWallet />
+      </WalletContext.Provider>
+    );
+    await act(() => vi.advanceTimersByTimeAsync(10000));
+    fireEvent.click(screen.getByText('Send to contact'));
+    fireEvent.click(screen.getByText('Max'));
+    expect(screen.getByLabelText('amount')).toHaveValue('0.99989');
+  });
+
+  it('QORT blocks Max when the network fee response failed, then recovers when the fee refresh succeeds', async () => {
+    let feeAvailable = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => ({
+        ok: !url.startsWith('/transactions/unitfee') || feeAvailable,
+        json: async () =>
+          url.startsWith('/addresses/balance/')
+            ? '1'
+            : url.startsWith('/transactions/unitfee')
+              ? 2000000
+              : [],
+      }))
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <WalletContext.Provider
+        value={{ ...defaultState, address: `Q${'a'.repeat(33)}` }}
+      >
+        <QortalWallet />
+      </WalletContext.Provider>
+    );
+    await act(async () => {});
+    await act(async () => fireEvent.click(screen.getByText('Send to contact')));
+    expect(screen.getByText('core:max')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'send-qort' })).toBeDisabled();
+    expect(
+      vi
+        .mocked(qortalRequest)
+        .mock.calls.some(([request]) => request.action === 'SEND_COIN')
+    ).toBe(false);
+    feeAvailable = true;
+    await act(() => vi.advanceTimersByTimeAsync(30000));
+    expect(screen.getByText('core:max')).toBeEnabled();
+    fireEvent.click(screen.getByText('core:max'));
+    expect(
+      screen.getByRole('textbox', { name: 'core:send.symbol_amount' })
+    ).toHaveValue('0.98');
   });
 
   it('QORT Max uses the on-chain fee, follows balance refreshes and preserves manual edits', async () => {
@@ -319,7 +428,7 @@ describe('wallet Send Max handoff', () => {
       </WalletContext.Provider>
     );
     await act(async () => {});
-    fireEvent.click(screen.getByText('Send to contact'));
+    await act(async () => fireEvent.click(screen.getByText('Send to contact')));
     fireEvent.click(screen.getByText('core:max'));
     const amount = screen.getByRole('textbox', {
       name: 'core:send.symbol_amount',
@@ -340,6 +449,42 @@ describe('wallet Send Max handoff', () => {
       coin: 'QORT',
       recipient,
       amount: 0.5,
+    });
+  });
+
+  it('QORT submits its Max amount after reserving the current network fee', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () =>
+          url.startsWith('/addresses/balance/')
+            ? '1.00000001'
+            : url.startsWith('/transactions/unitfee')
+              ? 2000000
+              : [],
+      }))
+    );
+    const recipient = `Q${'a'.repeat(33)}`;
+    render(
+      <WalletContext.Provider value={{ ...defaultState, address: recipient }}>
+        <QortalWallet />
+      </WalletContext.Provider>
+    );
+    await act(async () => {});
+    await act(async () => fireEvent.click(screen.getByText('Send to contact')));
+    fireEvent.click(screen.getByText('core:max'));
+    expect(
+      screen.getByRole('textbox', { name: 'core:send.symbol_amount' })
+    ).toHaveValue('0.98000001');
+    await act(async () =>
+      fireEvent.click(screen.getByRole('button', { name: 'send-qort' }))
+    );
+    expect(qortalRequest).toHaveBeenCalledWith({
+      action: 'SEND_COIN',
+      coin: 'QORT',
+      recipient,
+      amount: 0.98000001,
     });
   });
 });

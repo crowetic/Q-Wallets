@@ -481,6 +481,43 @@ it('tracks Max against fee edits while preserving exact precision and manual amo
   ).toBeDisabled();
 });
 
+it('submits XMR Max from unlocked funds with the full fee limit reserved and no unsupported sweep flag', async () => {
+  request.mockImplementation(async ({ action }) =>
+    action === 'GET_USER_WALLET'
+      ? { address: status.address, network: 'stagenet' }
+      : action === 'SEND_COIN'
+        ? 'b'.repeat(64)
+        : {
+            ...status,
+            balanceAtomic: '1000000000001',
+            unlockedBalanceAtomic: '500000000001',
+          }
+  );
+  show();
+  await connect();
+  openSend();
+  fireEvent.change(screen.getByLabelText('core:xmr.recipient'), {
+    target: { value: status.address },
+  });
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'core:action.send_max capitalizeFirstChar',
+    })
+  );
+  fireEvent.click(
+    screen.getByRole('button', { name: 'core:action.send capitalizeFirstChar' })
+  );
+  await waitFor(() =>
+    expect(request).toHaveBeenCalledWith({
+      action: 'SEND_COIN',
+      coin: 'XMR',
+      recipient: status.address,
+      amount: '0.499000000001',
+      maxFee: '0.001',
+    })
+  );
+});
+
 it('shows unlocked funds as available while retaining the total and scan information', async () => {
   request.mockImplementation(async ({ action }) =>
     action === 'GET_USER_WALLET'

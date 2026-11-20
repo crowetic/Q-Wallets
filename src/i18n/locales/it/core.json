@@ -249,7 +249,10 @@
     "arrr_address_invalid": "Il Core selezionato non riconosce questo indirizzo ARRR.",
     "arrr_validation_unavailable": "La convalida degli indirizzi non è disponibile. Controlla la connessione e la versione del tuo Core.",
     "arrr_validating": "Verifica dell’indirizzo con Core…",
-    "arrr_send_failed": "Invio di ARRR non riuscito. Controlla lo stato del portafoglio e la connessione al Core."
+    "arrr_send_failed": "Invio di ARRR non riuscito. Controlla lo stato del portafoglio e la connessione al Core.",
+    "max_sendable_estimate": "Massimo stimato {{amount}} {{symbol}}",
+    "max_finalized_in_hub": "Hub calcola l’importo finale e la commissione di rete prima della tua approvazione.",
+    "waiting_fee": "In attesa della commissione di rete. Riapri la finestra di invio per riprovare."
   },
   "filters": {
     "all": "Tutto",

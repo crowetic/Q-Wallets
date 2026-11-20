@@ -205,6 +205,7 @@ export default function PirateWallet() {
     );
   const {
     amount: arrrAmount,
+    isMaxSelected: isArrrMax,
     setAmount: setArrrAmount,
     sendMax: handleSendMaxArrr,
   } = useSendAmount(maxSendableArrrCoin());
@@ -809,6 +810,14 @@ export default function PirateWallet() {
             </Tooltip>
           }
           isBalanceLoading={isLoadingWalletBalanceArrr}
+          maxSelected={isArrrMax}
+          sendMaxDisabled={
+            !isSynced ||
+            isLoadingWalletBalanceArrr ||
+            maxSendableArrrCoin() <= 0 ||
+            openTxArrrSubmit
+          }
+          isSubmitting={openTxArrrSubmit}
           maxSendable={maxSendableArrrCoin()}
           onAmountChange={setArrrAmount}
           onClearRecipient={handleClearArrrRecipient}

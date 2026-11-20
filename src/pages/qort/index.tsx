@@ -283,7 +283,7 @@ export default function QortalWallet() {
   const [isLoadingWalletBalanceQort, setIsLoadingWalletBalanceQort] =
     useState<boolean>(true);
   const [paymentInfo, setPaymentInfo] = useState<any>([]);
-  const [qortTxFee, setQortTxFee] = useState<number>(0.01);
+  const [qortTxFee, setQortTxFee] = useState<number>(NaN);
   const [arbitraryInfo, setArbitraryInfo] = useState<any>([]);
   const [atInfo, setAtInfo] = useState<any>([]);
   const [groupInfo, setGroupInfo] = useState<any>([]);
@@ -352,7 +352,7 @@ export default function QortalWallet() {
   };
 
   const formatQortAmount = (value: unknown) => formatDecimal(value, 2, 2);
-  const formatQortFee = (value: unknown) => formatDecimal(value, 2, 4);
+  const formatQortFee = (value: unknown) => formatDecimal(value, 2, 8);
 
   // Safely-spendable max via integer-satoshi math (avoids the floating-point
   // boundary error). QORT has a deterministic on-chain fee and an account
@@ -1090,25 +1090,38 @@ export default function QortalWallet() {
 
   useEffect(() => {
     let cancelled = false;
-
+    let active: AbortController | null = null;
+    setQortTxFee(NaN);
     const fetchQortTxFee = async () => {
+      const controller = new AbortController();
+      active = controller;
+      const timer = setTimeout(() => controller.abort(), 6000);
       try {
-        const res = await fetch('/transactions/unitfee?txType=PAYMENT');
+        const res = await fetch('/transactions/unitfee?txType=PAYMENT', {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error('Payment fee unavailable');
         const rawFee = await res.json();
-
-        if (!cancelled && typeof rawFee === 'number' && rawFee > 0) {
-          setQortTxFee(Math.max(rawFee / QORT_1_UNIT, 0.01));
-        }
+        if (!Number.isSafeInteger(rawFee) || rawFee <= 0)
+          throw new Error('Invalid payment fee');
+        if (!cancelled) setQortTxFee(rawFee / QORT_1_UNIT);
       } catch (err) {
-        console.error('Failed to fetch QORT tx fee', err);
+        if (!cancelled) {
+          setQortTxFee(NaN);
+          console.error('Failed to fetch QORT tx fee', err);
+        }
+      } finally {
+        clearTimeout(timer);
       }
     };
-
-    fetchQortTxFee();
+    void fetchQortTxFee();
+    const timer = openQortSend ? setInterval(fetchQortTxFee, 30000) : null;
     return () => {
       cancelled = true;
+      active?.abort();
+      if (timer !== null) clearInterval(timer);
     };
-  }, []);
+  }, [openQortSend, address]);
 
   useEffect(() => {
     if (!address) return;
@@ -1133,6 +1146,10 @@ export default function QortalWallet() {
       return;
     }
 
+    if (!validateAmountLocal(qortAmount)) {
+      setAmountTouched(true);
+      return;
+    }
     setOpenTxQortSubmit(true);
     try {
       const sendRequest = await qortalRequest({
@@ -5426,7 +5443,7 @@ export default function QortalWallet() {
                       {isLoadingWalletBalanceQort
                         ? t('core:send.max_sendable_loading')
                         : t('core:send.max_sendable', {
-                            amount: formatQortAmount(maxSendableQortCoin()),
+                            amount: formatDecimal(maxSendableQortCoin(), 0, 8),
                             symbol: 'QORT',
                           })}
                     </Typography>
@@ -5435,6 +5452,11 @@ export default function QortalWallet() {
                 <Button
                   variant="text"
                   onClick={handleSendMaxQort}
+                  disabled={
+                    !Number.isFinite(qortTxFee) ||
+                    isLoadingWalletBalanceQort ||
+                    maxSendableQortCoin() <= 0
+                  }
                   sx={{
                     color: 'primary.main',
                     fontSize: { xs: 13.8, md: 14.2 },
@@ -5554,6 +5576,11 @@ export default function QortalWallet() {
             />
           </Box>
 
+          {!Number.isFinite(qortTxFee) && (
+            <Typography color="warning.main" variant="body2">
+              {t('core:send.waiting_fee')}
+            </Typography>
+          )}
           <Tooltip title={t('core:send.network_fee_max_tooltip')}>
             <Box
               sx={{
@@ -5586,7 +5613,9 @@ export default function QortalWallet() {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {formatQortAmount(qortTxFee)} QORT
+                {Number.isFinite(qortTxFee)
+                  ? `${formatQortFee(qortTxFee)} QORT`
+                  : '—'}
               </Typography>
             </Box>
           </Tooltip>

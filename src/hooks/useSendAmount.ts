@@ -12,6 +12,7 @@ export const useSendAmount = (maxSendable: number) => {
 
   return {
     amount: selection.max ? maxSendable : selection.amount,
+    isMaxSelected: selection.max,
     setAmount,
     sendMax,
   };

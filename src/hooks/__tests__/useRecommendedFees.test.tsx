@@ -44,6 +44,12 @@ describe('isValidFeeEstimate', () => {
       false
     );
   });
+
+  it.each([0, -1, NaN, Infinity])('rejects unusable fee rates %s', (rate) => {
+    expect(isValidFeeEstimate({ ...estimate, medium_fee_per_kb: rate })).toBe(
+      false
+    );
+  });
 });
 
 describe('useRecommendedFees', () => {
@@ -137,5 +143,52 @@ describe('useRecommendedFees', () => {
 
     expect(result.current.data).toBeNull();
     expect(result.current.currentFee).toBeNull();
+  });
+
+  it('does not apply an old publisher response after switching publisher', async () => {
+    let finish!: (value: unknown) => void;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.includes('searchsimple'))
+          return okJson([
+            {
+              name: url.includes('Foreign-Fee-Publisher')
+                ? 'Foreign-Fee-Publisher'
+                : 'JSON.Bridge',
+              identifier: 'coinInfo-BTC',
+            },
+          ]);
+        if (url.includes('/JSON/JSON.Bridge/'))
+          return new Promise((resolve) => {
+            finish = resolve;
+          });
+        return okJson({ ...estimate, medium_fee_per_kb: 99 });
+      })
+    );
+    const { result } = renderHook(() =>
+      useRecommendedFees({ selectedCoin: 'BTC' })
+    );
+    await waitFor(() => expect(finish).toBeTypeOf('function'));
+    act(() => result.current.setSelectedFeePublisher('Foreign-Fee-Publisher'));
+    await waitFor(() => expect(result.current.currentFee).toBe(99));
+    await act(async () => {
+      finish(okJson(estimate));
+    });
+    expect(result.current.currentFee).toBe(99);
+  });
+
+  it('clears the previous coin quote immediately while the next coin is loading', async () => {
+    const fetch = installFetch(estimate);
+    vi.stubGlobal('fetch', fetch);
+    const { result, rerender } = renderHook(
+      ({ coin }) => useRecommendedFees({ selectedCoin: coin }),
+      { initialProps: { coin: 'BTC' } }
+    );
+    await waitFor(() => expect(result.current.currentFee).toBe(20));
+    fetch.mockImplementation(() => new Promise(() => {}));
+    rerender({ coin: 'LTC' });
+    expect(result.current.currentFee).toBeNull();
+    expect(result.current.data).toBeNull();
   });
 });

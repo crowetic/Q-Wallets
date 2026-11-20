@@ -59,7 +59,7 @@ import {
   ExternalSendForm,
   sendCoinDialogPaperSx,
 } from '../../components/ExternalSendForm';
-import { calculateMaxSendable } from '../../utils/maxSendable';
+import { calculateMaxSendable, canRequestMax } from '../../utils/maxSendable';
 
 interface TablePaginationActionsProps {
   count: number;
@@ -208,6 +208,7 @@ export default function RavencoinWallet() {
     );
   const {
     amount: rvnAmount,
+    isMaxSelected: isRvnMax,
     setAmount: setRvnAmount,
     sendMax: handleSendMaxRvn,
   } = useSendAmount(maxSendableRvnCoin());
@@ -246,10 +247,11 @@ export default function RavencoinWallet() {
   };
 
   const disableCanSendRvn = () =>
-    rvnAmount <= 0 ||
+    (!isRvnMax && rvnAmount <= 0) ||
+    (isRvnMax && (!sendFee || !canRequestMax(walletBalanceRvn))) ||
     rvnRecipient === EMPTY_STRING ||
     addressFormatError ||
-    rvnAmount > maxSendableRvnCoin();
+    (!isRvnMax && rvnAmount > maxSendableRvnCoin());
 
   const handleRecipientChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -440,12 +442,15 @@ export default function RavencoinWallet() {
     setSendRvnError(EMPTY_STRING);
     setOpenSendRvnError(false);
     setOpenSendRvnSuccess(false);
-    if (!Number.isFinite(rvnAmount) || rvnAmount <= 0) {
+    if (!isRvnMax && (!Number.isFinite(rvnAmount) || rvnAmount <= 0)) {
       setSendRvnError(t('core:message.error.amount_positive'));
       setOpenSendRvnError(true);
       return;
     }
-    if (rvnAmount > maxSendableRvnCoin()) {
+    if (
+      (isRvnMax && !canRequestMax(walletBalanceRvn)) ||
+      (!isRvnMax && rvnAmount > maxSendableRvnCoin())
+    ) {
       setSendRvnError(
         t('core:message.error.amount_exceeds_balance', {
           maxAmount: maxSendableRvnCoin(),
@@ -469,7 +474,7 @@ export default function RavencoinWallet() {
         action: 'SEND_COIN',
         coin: Coin.RVN,
         recipient: rvnRecipient,
-        amount: rvnAmount,
+        ...(isRvnMax ? { sendMax: true } : { amount: rvnAmount }),
         fee: rvnFeeCalculated,
       });
       requireSendCoinTransactionId(
@@ -686,6 +691,12 @@ export default function RavencoinWallet() {
             />
           }
           isBalanceLoading={isLoadingWalletBalanceRvn}
+          maxIsEstimate
+          maxSelected={isRvnMax}
+          isSubmitting={openTxRvnSubmit}
+          sendMaxDisabled={
+            !sendFee || !canRequestMax(walletBalanceRvn) || openTxRvnSubmit
+          }
           maxSendable={maxSendableRvnCoin()}
           onAmountChange={setRvnAmount}
           onClearRecipient={handleClearRvnRecipient}

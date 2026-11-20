@@ -64,10 +64,33 @@ describe('calculateMaxSendable', () => {
     expect(calculateMaxSendable('', 0.0005)).toBe(0);
   });
 
-  it('truncates to 8 decimal places', () => {
+  it('never rounds a balance upward to invent an extra atomic unit', () => {
     const result = calculateMaxSendable(0.123456789, 0);
-    expect(result).toBe(0.12345679); // rounded at satoshi precision
+    expect(result).toBe(0.12345678);
     expect(result.toString().split('.')[1].length).toBeLessThanOrEqual(8);
+  });
+
+  it('rejects invalid fees and buffers instead of increasing the maximum', () => {
+    expect(calculateMaxSendable(1, -0.1)).toBe(0);
+    expect(calculateMaxSendable(1, '', 1000)).toBe(0);
+    expect(calculateMaxSendable(1, 0.01, NaN)).toBe(0);
+    expect(calculateMaxSendable(1, 0.01, Infinity)).toBe(0);
+  });
+
+  it('subtracts string balances exactly and remains within the Hub atomic boundary', () => {
+    for (const balance of [
+      '90071992.54740991',
+      '100000000.00000003',
+      '1000000000.00000005',
+    ]) {
+      const [whole, fraction] = balance.split('.');
+      const available =
+        BigInt(whole) * 100000000n + BigInt(fraction) - 1000000n;
+      const result = calculateMaxSendable(balance, '0.01');
+      expect(result).toBeGreaterThan(0);
+      expect(BigInt(Math.round(result * 1e8))).toBeLessThanOrEqual(available);
+      expect(available - BigInt(Math.round(result * 1e8))).toBeLessThan(32n);
+    }
   });
 
   it('ignores negative buffers (treats them as zero)', () => {
